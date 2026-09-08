@@ -1,8 +1,7 @@
 /**
- * 인라인 스타일 객체와 전역 CSS
+ * 화면 요소 인라인 스타일 모음 (S)
+ * 전역 CSS 는 ./css.js 에 분리되어 있습니다.
  */
-import hikrWoff2 from "../assets/fonts/HiKR-ExtraBold.woff2";
-import hikrWoff from "../assets/fonts/HiKR-ExtraBold.woff";
 /* ───────── 스타일 ───────── */
 export const S = {
   root:{minHeight:"100vh",background:"#23304d",display:"flex",justifyContent:"center",alignItems:"flex-start",fontFamily:"'MiceGothic',system-ui,sans-serif"},
@@ -27,7 +26,7 @@ export const S = {
   olHint:{color:"var(--paper)",opacity:.8,marginTop:24,fontSize:14}, olSub:{color:"var(--paper)",opacity:.55,fontSize:12,marginTop:12,textAlign:"center"},
   envWrap:{position:"relative",width:"100%",perspective:"900px"},
   envBody:{position:"relative",background:"var(--paper)",borderRadius:14,padding:"84px 20px 22px",boxShadow:"0 24px 60px rgba(0,0,0,.5)",overflow:"hidden"},
-  envFlap:{position:"absolute",top:0,left:0,right:0,height:50,background:"var(--paper-2)",clipPath:"polygon(0 0,100% 0,50% 100%)",transformOrigin:"top center",zIndex:3},
+  envFlap:{position:"absolute",top:0,left:0,right:0,height:50,borderRadius:"14px 14px 0 0",background:"var(--paper-2)",clipPath:"polygon(0 0,100% 0,50% 100%)",transformOrigin:"top center",zIndex:3},
   envSeal:{position:"absolute",top:24,left:"50%",marginLeft:-23,width:46,height:46,borderRadius:"50%",background:"var(--stamp)",color:"#fff",display:"grid",placeItems:"center",fontFamily:"'HiKR',sans-serif",fontSize:13,boxShadow:"0 4px 10px rgba(0,0,0,.3)",zIndex:5,border:"2px solid #fff"},
   envLabel:{fontSize:11,color:"var(--stamp)",fontWeight:800,letterSpacing:1,textAlign:"center"},
   envTitle:{fontFamily:"'HiKR',sans-serif",fontSize:21,color:"var(--ink)",textAlign:"center",margin:"6px 0 12px"},
@@ -48,7 +47,7 @@ export const S = {
   metaRow:{display:"flex",gap:8,margin:"14px 0",padding:"12px 0",borderTop:"1px solid var(--line)",borderBottom:"1px solid var(--line)"},
   missionHead:{fontFamily:"'HiKR',sans-serif",fontSize:14,color:"var(--ink)",margin:"4px 0 10px"},
   mission:{display:"flex",alignItems:"center",gap:10,background:"var(--paper-2)",borderRadius:12,padding:"11px 13px"},
-  missionTag:{fontSize:10.5,fontWeight:800,color:"var(--sea)",background:"rgba(30,142,138,.12)",padding:"3px 7px",borderRadius:6},
+  missionTag:{flexShrink:0,whiteSpace:"nowrap",fontSize:10.5,fontWeight:800,color:"var(--sea)",background:"rgba(30,142,138,.12)",padding:"3px 7px",borderRadius:6},
   modalScrim:{position:"absolute",inset:0,background:"rgba(13,23,48,.55)",display:"flex",alignItems:"flex-end",zIndex:50},
   sheet:{background:"var(--paper)",width:"100%",maxHeight:"92%",overflowY:"auto",borderRadius:"22px 22px 0 0",padding:"10px 18px 22px",boxShadow:"0 -10px 40px rgba(0,0,0,.4)"},
   sheetGrab:{width:42,height:5,borderRadius:5,background:"var(--line)",margin:"0 auto 14px"},
@@ -150,37 +149,4 @@ export const S = {
   toast:{position:"absolute",bottom:84,left:"50%",transform:"translateX(-50%)",background:"var(--ink)",color:"var(--paper)",fontSize:13,fontWeight:700,padding:"11px 18px",borderRadius:24,boxShadow:"0 8px 24px rgba(0,0,0,.3)",zIndex:60,whiteSpace:"nowrap"},
 };
 
-export const CSS = `
-@font-face{font-family:'MiceGothic';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2206-01@1.0/MICEGothic.woff2') format('woff2');font-weight:400;font-display:swap}
-@font-face{font-family:'MiceGothic';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2206-01@1.0/MICEGothic%20Bold.woff2') format('woff2');font-weight:700;font-display:swap}
-@font-face{font-family:'HiKR';src:url(${hikrWoff2}) format('woff2'),url(${hikrWoff}) format('woff');font-weight:100 900;font-style:normal;font-display:swap}
-:root{--paper:#F4EDDF;--paper-2:#EAE0CB;--ink:#16223F;--ink-soft:#5A668A;--stamp:#131F3C;--stamp-deep:#0B1426;--me:#2EB872;--live:#F2913C;--gold:#E3A92C;--sea:#1E8E8A;--line:rgba(22,34,63,.13);}
-*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
-html,body,#root{font-family:'MiceGothic',system-ui,sans-serif}
-button,input,select,textarea{font-family:inherit}
-button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
-.scroll::-webkit-scrollbar,.sheet::-webkit-scrollbar{width:0}
-.range{-webkit-appearance:none;height:6px;border-radius:6px;background:var(--paper);outline:none}
-.range::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--stamp);cursor:pointer;box-shadow:0 3px 8px rgba(19,31,60,.4);border:3px solid #fff}
-.range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--stamp);border:3px solid #fff;cursor:pointer}
-@keyframes shake{0%,100%{transform:rotate(-14deg) translateY(0)}25%{transform:rotate(12deg) translateY(-10px)}50%{transform:rotate(-8deg) translateY(4px)}75%{transform:rotate(10deg) translateY(-6px)}}
-.die-shake{display:inline-block;animation:shake .28s linear infinite}
-@keyframes spink{to{transform:rotate(360deg)}}.spin{display:inline-block;animation:spink .8s linear infinite}
-@keyframes olin{from{opacity:0}to{opacity:1}}.overlay-in{animation:olin .25s ease}
-@keyframes popin{from{opacity:0;transform:scale(.9) translateY(14px)}to{opacity:1;transform:none}}.pop-in{animation:popin .4s cubic-bezier(.2,.9,.3,1.2)}
-@keyframes revealin{0%{opacity:0;transform:translateY(26px) scale(.96)}100%{opacity:1;transform:none}}.reveal-in{animation:revealin .5s cubic-bezier(.2,.9,.3,1.1)}
-@keyframes carddrop{0%{opacity:0;transform:translateY(-20px) rotate(-6deg)}100%{opacity:1;transform:none}}.card-drop{animation:carddrop .5s ease}
-@keyframes flapopen{to{transform:rotateX(-172deg)}}.flap-open{animation:flapopen .55s cubic-bezier(.5,0,.4,1) forwards}
-@keyframes sealcrack{0%{transform:scale(1)}30%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(.6) rotate(40deg) translateY(40px);opacity:0}}.seal-crack{animation:sealcrack .6s ease forwards}
-@keyframes flashk{0%{opacity:0}35%{opacity:1}100%{opacity:0}}.flash{animation:flashk 1s ease forwards;animation-delay:.35s}
-@keyframes burstk{0%{opacity:0;transform:translate(-50%,0) scale(.4)}30%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--tx)),var(--ty)) scale(.2)}}.burst{animation:burstk .8s ease forwards;animation-delay:.4s}
-@keyframes sheetin{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}.sheet-in{animation:sheetin .3s cubic-bezier(.2,.9,.3,1)}
-@keyframes toastin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}.toast-in{animation:toastin .25s ease}
-@keyframes mapblinkk{0%,100%{fill:#fff}50%{fill:#FCE2C2}}
-.mapBlink{animation:mapblinkk 1.1s ease-in-out infinite}
-@keyframes tileblinkk{0%,100%{box-shadow:0 0 0 0 rgba(242,145,60,.6)}50%{box-shadow:0 0 0 5px rgba(242,145,60,.18)}}
-.tileBlink{animation:tileblinkk 1.1s ease-in-out infinite}
-@keyframes blinkdot{0%,100%{opacity:1}50%{opacity:.2}}
-.blink-dot{animation:blinkdot 1s ease-in-out infinite}
-@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
-`;
+export { CSS } from "./css.js";

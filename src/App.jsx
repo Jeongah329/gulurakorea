@@ -2,10 +2,11 @@
  * 앱 셸 — 전역 상태, 게임 진행, 탭 라우팅
  */
 import React, { useState, useRef, useEffect } from "react";
-import { kakaoRegionAny, kakaoRouteUrl } from "./api/kakao.js";
+import { kakaoRegionAny } from "./api/kakao.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
-import { DIST_STEPS, EVENT_CARDS, FRIEND_POOL, ME, THEME_LABELS, TOLL, methodFor } from "./data/constants.js";
+import { DIST_STEPS, EVENT_CARDS, FRIEND_POOL, ME, TOLL, methodFor } from "./data/constants.js";
 import { SAMPLE_POOL } from "./data/sampleDestinations.js";
+import { DrawOverlay } from "./overlays/DrawOverlay.jsx";
 import { ResultOverlay } from "./overlays/ResultOverlay.jsx";
 import { ShareModal } from "./overlays/ShareModal.jsx";
 import { VerifyFlow } from "./overlays/VerifyFlow.jsx";
@@ -13,8 +14,7 @@ import { MainScreen } from "./screens/MainScreen.jsx";
 import { MapScreen } from "./screens/MapScreen.jsx";
 import { MyScreen } from "./screens/MyScreen.jsx";
 import { RankScreen } from "./screens/RankScreen.jsx";
-import { KakaoMap } from "./ui/KakaoMap.jsx";
-import { DieFace, Envelope, Meta, Splash } from "./ui/primitives.jsx";
+import { DiceLogo, Splash } from "./ui/primitives.jsx";
 import { CSS, S } from "./ui/styles.js";
 
 /* ───────── 메인 앱 ───────── */
@@ -119,7 +119,7 @@ export default function App(){
       setPhase("sealed");
     }, wait);
   }
-  function depart(){ setPhase("opening"); setTimeout(()=> setPhase("revealed"), 1250); }
+  function depart(){ setPhase("opening"); setTimeout(()=> setPhase("revealed"), 1900); }
 
   const destOwner = candidate ? ownership[candidate.sgg] : undefined;
   const tollDue = candidate && destOwner && destOwner!=="me";
@@ -176,21 +176,21 @@ export default function App(){
   function resetDemo(){ setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(120); setInventory([]); setActiveTrip(null); setVerifyOpen(false); resetToMain(); setTab("main"); }
 
   return (
-    <div style={S.root}>
+    <div className="app-root" style={S.root}>
       <style>{CSS}</style>
-      <div style={S.phone}>
+      <div className="app-shell" style={S.phone}>
         {!started ? <Splash onStart={()=>setStarted(true)}/> : (<>
-        <header style={S.appbar}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}><span style={S.logoDie}>⚀</span><span style={S.wordmark}>대한민국 부루마블</span></div>
+        <header className="app-bar" style={S.appbar}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}><DiceLogo/><span style={S.wordmark}>대한민국 부루마블</span></div>
           <div style={S.coinPill}>🪙 {coins}</div>
         </header>
-        <main style={S.body} className="scroll">
+        <main style={S.body} className="app-body scroll">
           {tab==="main" && <MainScreen {...{themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify:()=>setVerifyOpen(true),finishTrip,origin,apiStatus}}/>}
           {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash}}/>}
           {tab==="rank" && <RankScreen {...{myRoomScore,myRoomRegions,room,memberCount:members.length}}/>}
           {tab==="my" && <MyScreen {...{score,coins,inventory,ownedCount,trips,cards,room,resetDemo,apiStatus,origin}}/>}
         </main>
-        <nav style={S.tabbar}>
+        <nav className="app-nav" style={S.tabbar}>
           {[["main","🎲","메인"],["map","🗺️","지도"],["rank","🏆","랭킹"],["my","👤","마이"]].map(([id,ic,lb])=>(
             <button key={id} onClick={()=>setTab(id)} style={{...S.tab,...(tab===id?S.tabOn:{})}}>
               <span style={{fontSize:20,filter:tab===id?"none":"grayscale(1) opacity(.55)"}}>{ic}</span>
@@ -199,39 +199,9 @@ export default function App(){
         </>)}
 
         {phase!=="main" && (
-          <div style={S.overlay} className="overlay-in">
-            {phase==="rolling" && (<div style={{textAlign:"center"}}><div className="die-shake"><DieFace n={dieN} size={92}/></div><p style={S.olHint}>목적지를 봉투에 담는 중…</p></div>)}
-            {phase==="sealed" && candidate && (
-              <div style={{textAlign:"center",width:"100%"}} className="pop-in">
-                {droppedCard && (<div style={S.cardDrop} className="card-drop"><span style={{fontSize:22}}>{droppedCard.icon}</span><div style={{textAlign:"left"}}><div style={{fontSize:11,color:"var(--gold)",fontWeight:800}}>이벤트 카드 획득!</div><div style={{fontSize:13,fontWeight:700,color:"var(--paper)"}}>{droppedCard.name}</div></div></div>)}
-                <Envelope opening={false} themes={relaxedMsg?["조건 완화됨"]:themes.map(t=>THEME_LABELS[t])} dist={DIST_STEPS[distIdx].label} dur={duration} relaxed={relaxedMsg}/>
-                <div style={{display:"flex",gap:10,marginTop:18,width:"100%"}}>
-                  <button onClick={rollDice} disabled={rollsLeft<=0} style={{...S.btnGhost,opacity:rollsLeft<=0?.4:1}}>다시 굴리기 · {rollsLeft}회</button>
-                  <button onClick={depart} style={S.btnDepart}>출발 ✦ 봉투 열기</button></div>
-                <p style={S.olSub}>출발하면 목적지가 확정돼요</p></div>)}
-            {phase==="opening" && candidate && (<div style={{textAlign:"center",width:"100%"}}><Envelope opening={true} themes={[]} dist="" dur="" relaxed={false}/><p style={{color:"var(--paper)",opacity:.85,marginTop:22,fontSize:14}}>봉인을 여는 중…</p></div>)}
-            {phase==="revealed" && candidate && (
-              <div style={{width:"100%"}} className="reveal-in">
-                <p style={{textAlign:"center",color:"var(--paper)",opacity:.7,fontSize:13,marginBottom:10}}>당신의 목적지는…</p>
-                <div style={S.destCard}>
-                  <div style={{...S.destImg, background: candidate.image ? `linear-gradient(180deg, rgba(10,18,36,0) 40%, rgba(10,18,36,.62) 100%), url(${candidate.image}) center/cover no-repeat` : `linear-gradient(135deg, ${candidate.grad[0]}, ${candidate.grad[1]})`}}>
-                    {candidate.depop && <span style={S.goldTag}>★ 황금 타일 · 2배 점수</span>}
-                    <div style={S.destImgInner}><span style={{fontSize:13,opacity:.9}}>{candidate.sido} · {candidate.sigungu}</span><h2 style={S.destName}>{candidate.title}</h2></div></div>
-                  <div style={{padding:"15px 18px"}}>
-                    {tollDue ? (<div style={{...S.ownBanner,background:"rgba(242,145,60,.12)",border:"1px solid rgba(242,145,60,.5)"}}><span style={{fontSize:18}}>🚧</span><div style={{flex:1,textAlign:"left"}}><b style={{color:"var(--stamp)",fontSize:13}}>{memberById(destOwner)?.name}님의 영토</b><div style={{fontSize:12,color:"var(--ink-soft)"}}>통행료 {TOLL}코인 발생</div></div>{hasExempt && <button onClick={()=>setUseExempt(v=>!v)} style={{...S.exemptBtn,...(useExempt?S.exemptOn:{})}}>🎫 {useExempt?"사용 중":"사용"}</button>}</div>)
-                     : destOwner==="me" ? (<div style={{...S.ownBanner,background:"rgba(30,142,138,.10)",border:"1px solid rgba(30,142,138,.35)"}}><span style={{fontSize:18}}>🏠</span><span style={{fontSize:13,color:"var(--ink)",fontWeight:700}}>내 영토 재방문 · +50점</span></div>)
-                     : (<div style={{...S.ownBanner,background:"rgba(227,169,44,.12)",border:"1px solid rgba(227,169,44,.45)"}}><span style={{fontSize:18}}>🚩</span><span style={{fontSize:13,color:"var(--ink)",fontWeight:700}}>미점령 지역 · 인증하면 {candidate.depop?200:100}점</span></div>)}
-                    <p style={S.overview}>{candidate.overview}</p>
-                    {isFinite(candidate.lat) && isFinite(candidate.lng) && (<div style={{marginTop:12}}>
-                      <KakaoMap lat={candidate.lat} lng={candidate.lng} title={candidate.title} height={150} level={5}/>
-                      <a href={kakaoRouteUrl(candidate)} target="_blank" rel="noreferrer" style={S.routeBtn}>🚗 카카오맵으로 길찾기</a>
-                    </div>)}
-                    <div style={S.metaRow}><Meta k="거리" v={`${candidate.distanceKm}km`}/><Meta k="일정" v={duration}/><Meta k="기본 점수" v={`+${destOwner==="me"?50:tollDue?40:(candidate.depop?200:100)}`} hi/></div>
-                    <p style={S.missionHead}>도착하면 인증할 미션</p>
-                    <div style={{display:"flex",flexDirection:"column",gap:8}}>{candidate.missions.map((m,i)=>(<div key={i} style={S.mission}><span style={S.missionTag}>{m.t}</span><span style={{fontSize:13.5,color:"var(--ink)"}}>{m.n}</span><span style={{marginLeft:"auto",fontSize:11.5,color:"var(--ink-soft)"}}>{methodFor(m.t)==="receipt"?"🧾 영수증":"📍 GPS"}</span></div>))}</div>
-                  </div></div>
-                <div style={{display:"flex",gap:10,marginTop:16}}><button onClick={resetToMain} style={S.btnGhost}>나중에</button><button onClick={startTrip} style={S.btnDepart}>여행 시작하기</button></div></div>)}
-          </div>)}
+          <DrawOverlay {...{phase,dieN,candidate,droppedCard,relaxedMsg,themes,distIdx,duration,
+            rollsLeft,rollDice,depart,destOwner,tollDue,hasExempt,useExempt,setUseExempt,
+            memberById,resetToMain,startTrip}}/>)}
 
         {verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}

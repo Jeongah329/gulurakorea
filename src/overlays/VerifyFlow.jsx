@@ -62,7 +62,7 @@ export function VerifyFlow({ trip, onMissionDone, onDone, memberById, flash }){
   function acceptReceipt(force){ if(!force && !Object.values(parsed.data.checks).every(Boolean)){ flash("검증 실패 항목이 있어요"); return; } onMissionDone(parsed.idx,{receipt:parsed.data}); setParsed(null); }
 
   return (
-    <div style={S.vfScreen} className="overlay-in">
+    <div style={S.vfScreen} className="overlay-in app-verify">
       <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={onFile} style={{display:"none"}}/>
       <div style={S.vfHead}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>

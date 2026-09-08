@@ -3,6 +3,7 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import { loadKakaoSdk } from "../api/kakao.js";
+import { S, CSS } from './styles';
 
 /* 카카오맵 컴포넌트 — 로드 실패 시 사유를 보여주는 대체 박스 */
 export function KakaoMap({ lat, lng, title, height = 160, level = 5 }) {

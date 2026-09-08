@@ -1,6 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
+import InviteAccept from "./components/InviteAccept.jsx";
+
+// /invite/코드 로 접속했으면 초대 수락 화면을, 아니면 평소대로 App을 렌더
+const isInviteRoute = window.location.pathname.startsWith("/invite/");
 
 /**
  * 최상위 에러 바운더리.
@@ -51,7 +55,7 @@ class ErrorBoundary extends React.Component {
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      {isInviteRoute ? <InviteAccept /> : <App />}
     </ErrorBoundary>
   </React.StrictMode>
 );

@@ -23,17 +23,42 @@ export function DieFace({ n, size=64 }) {
 }
 
 export function Envelope({ opening, themes, dist, dur, relaxed }){
-  const burst = Array.from({length:9}).map((_,i)=>{ const a=(i/9)*Math.PI*2; return { tx:Math.cos(a)*70, ty:Math.sin(a)*70, d:i*0.02 }; });
+  const burst = Array.from({length:20}).map((_,i)=>{
+    const a=(i/20)*Math.PI*2 + (i%3)*0.28;
+    const r=58+((i*37)%54);
+    return { tx:Math.cos(a)*r, ty:Math.sin(a)*r-26, d:0.3+(i%7)*0.06, sz:i%4===0?9:i%3===0?5:7,
+             c:i%3===0?"var(--gold)":i%3===1?"#FFF3CE":"#FFD98A" };
+  });
   return (<div style={S.envWrap}><div style={S.envBody}><p style={S.envLabel}>목적지 봉인</p><h3 style={S.envTitle}>어디로 가게 될까요?</h3>
     {!opening && (<><div style={S.hintRow}>{themes.map((h,i)=><span key={i} style={S.hintChip}>{h}</span>)}{dist&&<span style={S.hintChip}>{dist}</span>}{dur&&<span style={S.hintChip}>{dur}</span>}</div>{relaxed && <p style={S.relax}>딱 맞는 곳이 없어 테마를 넓혔어요</p>}</>)}</div>
     <div style={S.envFlap} className={opening?"flap-open":""}/><div style={S.envSeal} className={opening?"seal-crack":""}>출발</div>
-    {opening && (<><div style={S.flash} className="flash"/>{burst.map((b,i)=>(<span key={i} className="burst" style={{"--tx":`${b.tx}px`,"--ty":`${b.ty}px`,animationDelay:`${b.d}s`,position:"absolute",top:30,left:"50%",width:8,height:8,borderRadius:"50%",background:"var(--gold)"}}/>))}</>)}</div>);
+    {opening && (<><div style={S.flash} className="flash"/><span className="magic-ring" style={{position:"absolute",top:46,left:"50%",width:120,height:120,borderRadius:"50%",border:"2px solid rgba(255,226,150,.85)",pointerEvents:"none",zIndex:4}}/>{burst.map((b,i)=>(<span key={i} className="burst" style={{"--tx":`${b.tx}px`,"--ty":`${b.ty}px`,animationDelay:`${b.d}s`,position:"absolute",top:40,left:"50%",width:b.sz,height:b.sz,borderRadius:"50%",background:b.c,boxShadow:`0 0 ${b.sz+4}px rgba(255,215,120,.9)`,pointerEvents:"none",zIndex:6}}/>))}</>)}</div>);
+}
+
+/* ───────── 로고 주사위 ───────── */
+export function DiceLogo({size=30}){
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" style={{display:"block"}}>
+      <g transform="rotate(-13 10 20)">
+        <rect x="1.5" y="12" width="15.5" height="15.5" rx="4.4" fill="var(--stamp)"/>
+        <circle cx="6.6" cy="17.1" r="1.6" fill="var(--paper)"/>
+        <circle cx="12" cy="22.5" r="1.6" fill="var(--paper)"/>
+      </g>
+      <g transform="rotate(10 21 12)">
+        <rect x="13" y="3" width="17" height="17" rx="4.8" fill="var(--paper)" stroke="var(--stamp)" strokeWidth="1.7"/>
+        <circle cx="18.2" cy="8.2" r="1.75" fill="var(--stamp)"/>
+        <circle cx="24.8" cy="8.2" r="1.75" fill="var(--stamp)"/>
+        <circle cx="18.2" cy="14.8" r="1.75" fill="var(--stamp)"/>
+        <circle cx="24.8" cy="14.8" r="1.75" fill="var(--stamp)"/>
+      </g>
+    </svg>
+  );
 }
 
 /* ───────── 인트로 스플래시 ───────── */
 export function Splash({onStart}){
   return (
-    <div style={S.splash}>
+    <div className="app-splash" style={S.splash}>
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"28px 26px",textAlign:"center"}}>
         <span style={S.splashEyebrow}>주사위로 떠나는 랜덤 국내여행</span>
         <h1 style={S.splashTitle}>대한민국</h1>

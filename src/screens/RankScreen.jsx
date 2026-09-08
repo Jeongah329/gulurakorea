@@ -2,6 +2,7 @@
  * 랭킹 탭
  */
 import React, { useMemo } from "react";
+import { NATIONAL_ROOMS } from "../data/constants.js";
 import { S } from "../ui/styles.js";
 
 /* ───────── 랭킹 ───────── */
