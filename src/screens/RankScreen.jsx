@@ -2,8 +2,8 @@
  * 랭킹 탭
  */
 import React, { useMemo } from "react";
-import { NATIONAL_ROOMS } from "../data/constants.js";
 import { S } from "../ui/styles.js";
+import { NATIONAL_ROOMS } from "../data/constants.js";
 
 /* ───────── 랭킹 ───────── */
 export function RankScreen({myRoomScore,myRoomRegions,room,memberCount}){

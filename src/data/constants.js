@@ -26,11 +26,6 @@ export const SIDO_TINT = {서울:"#F1C3BA",부산:"#DACEEC",대구:"#F1CDD7",인
 
 export const ME = { id:"me", name:"나", color:"#2EB872" };
 
-export const FRIEND_POOL = [
-  { id:"f1", name:"은하", color:"#8B6FE0", tiles:["37040","32340","37020"], score:320 },
-  { id:"f2", name:"정아", color:"#34B5D6", tiles:["32410","37330","32350"], score:210 },
-];
-
 export const TOLL = 30;
 
 export const methodFor = (t)=> t==="맛집" ? "receipt" : "gps";

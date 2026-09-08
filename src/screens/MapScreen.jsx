@@ -1,7 +1,7 @@
 /**
  * 지도 탭 — 실제 경계 지도와 타일 보드
  */
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { BOARD, SIDO_ACCENT, SIDO_FULL } from "../data/board.js";
 import { SIDO_ORDER, TOLL } from "../data/constants.js";
 import { SIGUNGU } from "../lib/sigungu.js";
@@ -9,11 +9,29 @@ import { Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
-export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash}){
+export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online}){
   const [view,setView] = useState("real");
-  const [joining,setJoining] = useState(false);
-  const [codeInput,setCodeInput] = useState("");
+  const [joining,setJoining] = useState(()=>!!pendingJoinCode);
+  const [codeInput,setCodeInput] = useState(()=>pendingJoinCode||"");
+  const [busy,setBusy] = useState(false);
   const activeSgg = activeTrip?.sgg;
+
+  // 초대 링크(?join=코드)로 들어온 경우: 코드를 자동 입력만 하고, 참여는 버튼을 눌러야 진행된다
+  useEffect(()=>{
+    if(pendingJoinCode){ setJoining(true); setCodeInput(pendingJoinCode); }
+  },[pendingJoinCode]);
+
+  async function handleCreate(){
+    if(!myName.trim()){ flash("닉네임을 입력해 주세요"); return; }
+    setBusy(true);
+    try{ await createRoom(); } finally { setBusy(false); }
+  }
+  async function handleJoin(){
+    if(!myName.trim()){ flash("닉네임을 입력해 주세요"); return; }
+    if(!codeInput.trim()){ flash("코드를 입력해 주세요"); return; }
+    setBusy(true);
+    try{ await joinRoom(codeInput); clearPendingJoin?.(); } finally { setBusy(false); }
+  }
   return (<div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div style={S.boardHead}>
       <div><p style={{fontSize:12,color:"var(--ink-soft)"}}>정복한 지역</p><p style={{fontFamily:"'HiKR',sans-serif",fontSize:26,color:"var(--ink)"}}>{ownedCount}<span style={{fontSize:15,color:"var(--ink-soft)"}}> 곳</span></p></div>
@@ -31,16 +49,19 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
     {!room ? (
       <div style={S.roomCard}><p style={{fontFamily:"'HiKR',sans-serif",fontSize:15,color:"var(--ink)",marginBottom:4}}>친구와 같은 게임판</p>
         <p style={{fontSize:12.5,color:"var(--ink-soft)",marginBottom:12,lineHeight:1.5}}>방을 만들어 친구를 초대하면 한 지도에서 영토를 두고 경쟁해요. 친구 땅에 도착하면 통행료를 냅니다.</p>
+        {!online && <p style={{fontSize:11,color:"var(--stamp)",marginBottom:10,lineHeight:1.5}}>⚠ 온라인 방 기능이 아직 꺼져 있어요 (Firebase 설정 필요 · README 참고)</p>}
+        <p style={{fontSize:11.5,color:"var(--ink-soft)",marginBottom:6}}>방에서 쓸 닉네임</p>
+        <input value={myName} onChange={e=>onNameChange(e.target.value.slice(0,10))} placeholder="닉네임 입력" maxLength={10} style={{...S.codeInput,width:"100%",marginBottom:10,boxSizing:"border-box"}}/>
         {!joining ? (
-          <div style={{display:"flex",gap:8}}><button onClick={createRoom} style={S.roomPrimary}>방 만들기</button><button onClick={()=>setJoining(true)} style={S.roomGhost}>코드로 참여</button></div>
+          <div style={{display:"flex",gap:8}}><button onClick={handleCreate} disabled={busy} style={{...S.roomPrimary,opacity:busy?.6:1}}>{busy?"만드는 중…":"방 만들기"}</button><button onClick={()=>setJoining(true)} disabled={busy} style={S.roomGhost}>코드로 참여</button></div>
         ) : (
           <div>
-            <p style={{fontSize:11.5,color:"var(--ink-soft)",marginBottom:6}}>친구에게 받은 방 코드를 입력하세요</p>
+            <p style={{fontSize:11.5,color:"var(--ink-soft)",marginBottom:6}}>{pendingJoinCode ? "초대 코드가 자동으로 입력됐어요 · 확인 후 참여를 눌러주세요" : "친구에게 받은 방 코드를 입력하세요"}</p>
             <div style={{display:"flex",gap:8}}>
               <input value={codeInput} onChange={e=>setCodeInput(e.target.value.toUpperCase())} placeholder="예: KR-7C2A" maxLength={8} style={S.codeInput}/>
-              <button onClick={()=>{ if(!codeInput.trim()){flash("코드를 입력해 주세요");return;} joinRoom(codeInput); }} style={{...S.roomPrimary,flex:"none",padding:"13px 20px"}}>참여</button>
+              <button onClick={handleJoin} disabled={busy} style={{...S.roomPrimary,flex:"none",padding:"13px 20px",opacity:busy?.6:1}}>{busy?"참여 중…":"참여"}</button>
             </div>
-            <button onClick={()=>{setJoining(false);setCodeInput("");}} style={{...S.roomGhost,marginTop:8,width:"100%"}}>취소</button>
+            <button onClick={()=>{setJoining(false);setCodeInput("");clearPendingJoin?.();}} disabled={busy} style={{...S.roomGhost,marginTop:8,width:"100%"}}>취소</button>
           </div>
         )}</div>
     ) : (

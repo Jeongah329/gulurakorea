@@ -191,7 +191,7 @@ export async function fetchDestinations({ themes, distCap, origin }) {
 export async function enrichDestination(d) {
   if (!d || d.source !== "tourapi") return d;
   const near = (ct, rows) => tourGet("locationBasedList2", {
-    mapX: String(d.lng), mapY: String(d.lat), radius: "10000",
+    mapX: String(d.lng), mapY: String(d.lat), radius: "2000",
     contentTypeId: ct, numOfRows: rows, pageNo: "1", arrange: "E",
   }).catch(() => []);
   const r = await Promise.all([

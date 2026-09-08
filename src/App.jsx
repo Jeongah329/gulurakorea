@@ -3,8 +3,13 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import { kakaoRegionAny } from "./api/kakao.js";
+import {
+  createRoomOnline, getMyId, getMyName, joinRoomOnline,
+  leaveRoomOnline, setMyName as persistMyName, subscribeRoom, syncOwnership, syncScore,
+} from "./api/rooms.js";
+import { isFirebaseConfigured } from "./firebase.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
-import { DIST_STEPS, EVENT_CARDS, FRIEND_POOL, ME, TOLL, methodFor } from "./data/constants.js";
+import { DIST_STEPS, EVENT_CARDS, ME, TOLL, methodFor } from "./data/constants.js";
 import { SAMPLE_POOL } from "./data/sampleDestinations.js";
 import { DrawOverlay } from "./overlays/DrawOverlay.jsx";
 import { ResultOverlay } from "./overlays/ResultOverlay.jsx";
@@ -22,6 +27,9 @@ export default function App(){
   const [tab,setTab] = useState("main");
   const [members,setMembers] = useState([ME]);
   const [room,setRoom] = useState(null);
+  const [pendingJoinCode,setPendingJoinCode] = useState("");
+  const [myId] = useState(()=>getMyId());
+  const [myName,setMyNameState] = useState(()=>getMyName());
   const [ownership,setOwnership] = useState({}); // sggCode -> memberId (홈 서울은 sido 검사로 처리)
   const [trips,setTrips] = useState([]);
   const [cards,setCards] = useState([]);
@@ -56,9 +64,30 @@ export default function App(){
     let code = "";
     try{ code = (new URLSearchParams(window.location.search).get("join")||"").trim().toUpperCase(); }catch(e){}
     if(!code) return;
-    setStarted(true); joinRoom(code); setTab("map");
+    // 초대 링크(?join=코드)로 들어오면 코드만 미리 채워 두고, 참여는 지도 탭에서 직접 누르게 한다.
+    setStarted(true); setTab("map"); setPendingJoinCode(code);
     try{ window.history.replaceState({}, "", window.location.pathname); }catch(e){}
   },[]);
+  useEffect(()=>{
+    // 방에 들어가 있는 동안 Firestore 문서를 실시간 구독해 실제 참여자와 점령 타일을 반영
+    if(!room?.code || !isFirebaseConfigured) return;
+    const unsub = subscribeRoom(room.code, (data)=>{
+      if(!data){ flash("방이 종료됐어요"); setRoom(null); setMembers([ME]); return; }
+      const remoteOwnership = data.ownership || {};
+      const mapped = {};
+      Object.entries(remoteOwnership).forEach(([sgg,pid])=>{ mapped[sgg] = pid===myId ? "me" : pid; });
+      setOwnership(mapped);
+      const remoteMembers = Object.entries(data.members||{})
+        .filter(([pid])=>pid!==myId)
+        .map(([pid,m])=>({ id:pid, name:m.name||"친구", color:m.color||"#999", score:m.score||0 }));
+      setMembers([ME, ...remoteMembers]);
+    }, (err)=>{ flash("연결이 끊겼어요 · " + ((err&&err.message)||err)); });
+    return unsub;
+  },[room?.code]);
+  useEffect(()=>{
+    if(!room?.code || !isFirebaseConfigured) return;
+    syncScore(room.code, myId, score);
+  },[score, room?.code]);
   useEffect(()=>{
     if(typeof navigator==="undefined" || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -151,7 +180,7 @@ export default function App(){
     const doneCount = t.missions.filter(m=>m.done).length;
     const perfect = doneCount===t.missions.length;
     let base, label;
-    if(t.outcome==="conquer"){ base=t.depop?200:100; setOwnership(o=>({...o,[t.sgg]:"me"})); label=`${t.sigungu} 점령`; setCoins(c=>c+(t.depop?60:30)); }
+    if(t.outcome==="conquer"){ base=t.depop?200:100; setOwnership(o=>({...o,[t.sgg]:"me"})); if(room?.code) syncOwnership(room.code, myId, t.sgg); label=`${t.sigungu} 점령`; setCoins(c=>c+(t.depop?60:30)); }
     else if(t.outcome==="toll"){ base=40; const f=memberById(t.tollFriend);
       if(t.useExempt && inventory.some(c=>c.id==="toll")){ setInventory(inv=>{const i=inv.findIndex(c=>c.id==="toll");return inv.filter((_,k)=>k!==i);}); label=`${f?.name}님 땅 통과(면제권)`; }
       else { setCoins(c=>Math.max(0,c-TOLL)); label=`통행료 ${TOLL}🪙 지불`; } }
@@ -166,25 +195,29 @@ export default function App(){
   }
   function finishTrip(){ const res=applyConquer(); if(res){ setResult(res); setVerifyOpen(false); } }
   function closeResult(){ setResult(null); setActiveTrip(null); setTab("map"); }
-  function joinRoom(code){
-    const c = (code||"").trim().toUpperCase() || "KR-"+Math.random().toString(36).slice(2,6).toUpperCase();
-    setMembers([ME, ...FRIEND_POOL]); setRoom({ code:c });
-    setOwnership(o=>{ const n={...o}; FRIEND_POOL.forEach(f=> f.tiles.forEach(t=>{ if(!n[t]) n[t]=f.id; })); return n; });
-    flash(`방 참여 완료 · ${c}`);
+  function updateMyName(n){ setMyNameState(n); persistMyName(n); }
+
+  async function joinRoom(code){
+    if(!isFirebaseConfigured){ flash("온라인 방 기능을 쓰려면 Firebase 설정이 필요해요"); return; }
+    try{
+      const mine = {}; Object.entries(ownership).forEach(([k,v])=>{ if(v==="me") mine[k]=v; });
+      const joined = await joinRoomOnline(code, myId, myName, mine);
+      setRoom({ code: joined });
+      flash(`방 참여 완료 · ${joined}`);
+    }catch(e){ flash((e&&e.message)||"참여에 실패했어요"); }
   }
 
-  function createRoom(){
-    const code = "KR-"+Math.random().toString(36).slice(2,6).toUpperCase();
-    setMembers([ME]); setRoom({ code });
-    flash(`방 생성됨 · 코드 ${code} · 친구를 초대하세요`);
+  async function createRoom(){
+    if(!isFirebaseConfigured){ flash("온라인 방 기능을 쓰려면 Firebase 설정이 필요해요"); return; }
+    try{
+      const mine = {}; Object.entries(ownership).forEach(([k,v])=>{ if(v==="me") mine[k]=v; });
+      const code = await createRoomOnline(myId, myName, mine);
+      setRoom({ code });
+      flash(`방 생성됨 · 코드 ${code} · 친구를 초대하세요`);
+    }catch(e){ flash((e&&e.message)||"방 생성에 실패했어요"); }
   }
-  function inviteFriends(){
-    setMembers(ms=>{ const ids=new Set(ms.map(m=>m.id)); return [...ms, ...FRIEND_POOL.filter(f=>!ids.has(f.id))]; });
-    setOwnership(o=>{ const n={...o}; FRIEND_POOL.forEach(f=> f.tiles.forEach(t=>{ if(!n[t]) n[t]=f.id; })); return n; });
-    flash("은하 · 정아님이 방에 참여했어요");
-  }
-  function leaveRoom(){ setMembers([ME]); setRoom(null); setOwnership(o=>{ const n={}; Object.entries(o).forEach(([k,v])=>{ if(v==="me") n[k]=v; }); return n; }); flash("방에서 나왔어요"); }
-  function resetDemo(){ setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(120); setInventory([]); setActiveTrip(null); setVerifyOpen(false); resetToMain(); setTab("main"); }
+  function leaveRoom(){ if(room?.code) leaveRoomOnline(room.code, myId); setMembers([ME]); setRoom(null); setOwnership(o=>{ const n={}; Object.entries(o).forEach(([k,v])=>{ if(v==="me") n[k]=v; }); return n; }); flash("방에서 나왔어요"); }
+  function resetDemo(){ if(room?.code) leaveRoomOnline(room.code, myId); setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(120); setInventory([]); setActiveTrip(null); setVerifyOpen(false); resetToMain(); setTab("main"); }
 
   return (
     <div className="app-root" style={S.root}>
@@ -197,7 +230,7 @@ export default function App(){
         </header>
         <main style={S.body} className="app-body scroll">
           {tab==="main" && <MainScreen {...{themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify:()=>setVerifyOpen(true),finishTrip,origin,apiStatus}}/>}
-          {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash}}/>}
+          {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured}}/>}
           {tab==="rank" && <RankScreen {...{myRoomScore,myRoomRegions,room,memberCount:members.length}}/>}
           {tab==="my" && <MyScreen {...{score,coins,inventory,ownedCount,trips,cards,room,resetDemo,apiStatus,origin}}/>}
         </main>
@@ -216,7 +249,7 @@ export default function App(){
 
         {verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onMissionPlace={setMissionPlace} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
-        {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} onAccept={()=>{ inviteFriends(); setShareOpen(false); }} flash={flash}/>)}
+        {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} flash={flash}/>)}
         {toast && <div style={S.toast} className="toast-in">{toast}</div>}
       </div>
     </div>
