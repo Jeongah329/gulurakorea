@@ -102,6 +102,10 @@ button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
   /* margin:auto — 내용이 짧으면 세로 가운데, 길면 위에서부터 스크롤 */
   .app-overlay > *{width:100%;max-width:430px;margin:auto;flex:0 0 auto;zoom:1.2}
   .app-verify > *{width:100%;max-width:430px;margin-left:auto!important;margin-right:auto!important;zoom:1.2}
+  /* 점령 결과 화면 — 상단 로고·탭 아래에서 시작하고, 본문·버튼 폭을 제한 */
+  .app-result{top:127px!important}
+  .app-result > *{width:100%;max-width:430px;margin-left:auto!important;margin-right:auto!important;zoom:1.2}
+  .app-result > *:last-child{border-top:none!important;padding-bottom:32px!important}
 }
 
 `;

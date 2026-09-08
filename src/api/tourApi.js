@@ -196,24 +196,49 @@ export async function enrichDestination(d) {
   }).catch(() => []);
   const r = await Promise.all([
     tourGet("detailCommon2", { contentId: d.contentid }).catch(() => []),
-    near("39", "12"),
-    near("12", "15"),
+    near("39", "30"),
+    near("12", "30"),
   ]);
   const c = r[0][0] || {};
-  const pick = (arr) => {
-    const ok = arr.filter(x => x && x.title && String(x.contentid) !== d.contentid);
-    return ok.length ? stripTags(ok[Math.floor(Math.random() * ok.length)].title) : "";
+
+  /* 주변 목록 → 사용자가 고를 수 있는 후보 리스트로 정리 (가까운 순, 최대 8곳) */
+  const toPlaces = (arr) => {
+    const seen = new Set();
+    return (arr || [])
+      .filter(x => x && x.title && String(x.contentid) !== d.contentid)
+      .map(x => {
+        const name = stripTags(x.title);
+        const m = parseFloat(x.dist);
+        return {
+          contentid: String(x.contentid),
+          name,
+          addr: x.addr1 || "",
+          distM: isFinite(m) ? Math.round(m) : null,
+          image: x.firstimage || x.firstimage2 || "",
+          lat: parseFloat(x.mapy), lng: parseFloat(x.mapx),
+        };
+      })
+      .filter(x => {
+        if (!x.name || seen.has(x.name)) return false;
+        seen.add(x.name); return true;
+      })
+      .sort((a, b) => (a.distM ?? 1e9) - (b.distM ?? 1e9))
+      .slice(0, 8);
   };
-  const foodName = pick(r[1]), playName = pick(r[2]);
+  const foods = toPlaces(r[1]), plays = toPlaces(r[2]);
+
   let ov = stripTags(c.overview);
   if (ov.length > 190) ov = ov.slice(0, 188) + "…";
   return Object.assign({}, d, {
     overview: ov || (d.addr ? d.addr + " · 한국관광공사 관광정보 등록지" : d.sido + " " + d.sigungu + "의 관광지입니다."),
     image: d.image || c.firstimage || "",
+    missionPool: { "맛집": foods, "체험": plays },
     missions: [
       { n: d.title + " 도착 인증", t: "명소" },
-      { n: foodName ? foodName + " 맛보기" : d.sigungu + " 로컬 맛집", t: "맛집" },
-      { n: playName ? playName + " 둘러보기" : d.sigungu + " 골목 산책", t: "체험" },
+      { n: foods[0] ? foods[0].name + " 맛보기" : d.sigungu + " 로컬 맛집", t: "맛집",
+        place: foods[0] || null },
+      { n: plays[0] ? plays[0].name + " 둘러보기" : d.sigungu + " 골목 산책", t: "체험",
+        place: plays[0] || null },
     ],
   });
 }

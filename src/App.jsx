@@ -134,6 +134,17 @@ export default function App(){
   }
   function resetToMain(){ setPhase("main"); setCandidate(null); setDroppedCard(null); setRelaxedMsg(false); setUseExempt(false); }
   function setMissionDone(idx,payload){ setActiveTrip(t=>{ const ms=t.missions.map((m,i)=>i===idx?{...m,done:true,...payload}:m); return {...t,missions:ms}; }); }
+  /* 주변 후보 목록에서 미션 장소를 바꿈 (인증 전에만 가능) */
+  function setMissionPlace(idx,place){
+    setActiveTrip(t=>{
+      const ms=t.missions.map((m,i)=>{
+        if(i!==idx || m.done) return m;
+        const suffix = m.t==="맛집" ? " 맛보기" : " 둘러보기";
+        return {...m, n: place.name + suffix, place};
+      });
+      return {...t,missions:ms};
+    });
+  }
 
   function applyConquer(){
     const t = activeTrip; if(!t) return null;
@@ -203,7 +214,7 @@ export default function App(){
             rollsLeft,rollDice,depart,destOwner,tollDue,hasExempt,useExempt,setUseExempt,
             memberById,resetToMain,startTrip}}/>)}
 
-        {verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}/>)}
+        {verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onMissionPlace={setMissionPlace} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
         {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} onAccept={()=>{ inviteFriends(); setShareOpen(false); }} flash={flash}/>)}
         {toast && <div style={S.toast} className="toast-in">{toast}</div>}

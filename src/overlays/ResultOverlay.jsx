@@ -7,7 +7,7 @@ import { S } from "../ui/styles.js";
 
 export function ResultOverlay({ trip, result, onClose }){
   return (
-    <div style={S.vfScreen} className="overlay-in">
+    <div style={S.vfScreen} className="overlay-in app-result">
       <div style={{flex:1,overflowY:"auto",padding:"24px 22px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
         <div style={{textAlign:"center"}} className="reveal-in">
           <div style={{...S.resultBadge,background:`linear-gradient(135deg,${trip.grad[0]},${trip.grad[1]})`}}>{trip.depop?"★":"✓"}</div>

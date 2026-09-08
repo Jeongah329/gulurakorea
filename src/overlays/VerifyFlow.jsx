@@ -9,7 +9,7 @@ import { KakaoMap } from "../ui/KakaoMap.jsx";
 import { Chk } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
-export function VerifyFlow({ trip, onMissionDone, onDone, memberById, flash }){
+export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, memberById, flash }){
   const arrivalIdx = trip.missions.findIndex(m=>m.t==="명소");
   const [step,setStep] = useState(trip.missions[arrivalIdx]?.done?1:0);
   const [scanning,setScanning] = useState(false);
@@ -17,11 +17,13 @@ export function VerifyFlow({ trip, onMissionDone, onDone, memberById, flash }){
   const [locating,setLocating] = useState(false);
   const [locMsg,setLocMsg] = useState("");
   const fileRef = useRef(null); const pendRef = useRef(-1);
+  const [pickerIdx,setPickerIdx] = useState(-1);   // 장소 고르기 목록이 열린 미션 번호
   const arrival = trip.missions[arrivalIdx];
   const others = trip.missions.map((m,i)=>({...m,i})).filter(o=>o.i!==arrivalIdx);
   const friend = trip.tollFriend? memberById(trip.tollFriend):null;
   const doneCount = trip.missions.filter(m=>m.done).length;
   const allDone = trip.missions.every(m=>m.done);
+  const pool = (t)=> (trip.missionPool && trip.missionPool[t]) || [];
 
   async function doArrival(){
     setLocating(true); setLocMsg("");
@@ -89,7 +91,7 @@ export function VerifyFlow({ trip, onMissionDone, onDone, memberById, flash }){
           </div>)}
 
         {step===0 && (<>
-          <div style={{...S.destImg,borderRadius:16,background:`linear-gradient(135deg,${trip.grad[0]},${trip.grad[1]})`,marginBottom:16}}>
+          <div style={{...S.destImg,borderRadius:16,marginBottom:16,background: trip.image ? `linear-gradient(180deg, rgba(10,18,36,0) 40%, rgba(10,18,36,.62) 100%), url(${trip.image}) center/cover no-repeat` : `linear-gradient(135deg,${trip.grad[0]},${trip.grad[1]})`}}>
             {trip.depop && <span style={S.goldTag}>★ 황금 타일</span>}
             <div style={S.destImgInner}><span style={{fontSize:12,opacity:.9}}>도착 미션</span><h3 style={{...S.destName,fontSize:19}}>{arrival.n}</h3></div>
           </div>
@@ -119,6 +121,31 @@ export function VerifyFlow({ trip, onMissionDone, onDone, memberById, flash }){
                   {m.method!=="receipt" && <button onClick={()=>demoGps(m.i)} style={S.demoMini}>데모</button>}
                 </div>}
               </div>
+
+              {/* 주변 후보 고르기 — TourAPI 주변 목록에서 직접 선택 */}
+              {!m.done && (pool(m.t).length>0) && (
+                <button onClick={()=>setPickerIdx(pickerIdx===m.i?-1:m.i)} style={S.swapBtn}>
+                  {pickerIdx===m.i ? "닫기" : `다른 곳 고르기 · 주변 ${pool(m.t).length}곳`}
+                </button>)}
+              {!m.done && pickerIdx===m.i && (
+                <div style={S.placeList} className="pop-in">
+                  {pool(m.t).map(pl=>{
+                    const on = m.place && m.place.contentid===pl.contentid;
+                    return (
+                      <button key={pl.contentid} onClick={()=>{ onMissionPlace(m.i,pl); setPickerIdx(-1); flash(pl.name+"(으)로 바꿨어요"); }}
+                        style={{...S.placeItem,...(on?S.placeItemOn:{})}}>
+                        <span style={{...S.placeThumb,...(pl.image?{background:`url(${pl.image}) center/cover no-repeat`}:{})}}>{pl.image?"":(m.t==="맛집"?"🍽":"🚶")}</span>
+                        <span style={{flex:1,textAlign:"left",minWidth:0}}>
+                          <b style={{fontSize:13,color:"var(--ink)",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pl.name}</b>
+                          <span style={{fontSize:11,color:"var(--ink-soft)",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            {pl.distM!=null?`${pl.distM<1000?pl.distM+"m":(pl.distM/1000).toFixed(1)+"km"} · `:""}{pl.addr||"주소 정보 없음"}
+                          </span>
+                        </span>
+                        {on && <span style={{fontSize:12,color:"var(--sea)",fontWeight:800}}>선택됨</span>}
+                      </button>);
+                  })}
+                </div>)}
+
               {scanning && pendRef.current===m.i && <div style={S.scanBox}><span className="spin" style={{fontSize:16}}>◌</span> 영수증 분석 중… (OCR)</div>}
             </div>))}
           </div>
