@@ -87,7 +87,10 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
       <div style={S.vfBody} className="scroll">
         {trip.outcome==="toll" && step<2 && (
           <div style={{...S.ownBanner,background:"rgba(242,145,60,.12)",border:"1px solid rgba(242,145,60,.5)",marginBottom:14}}>
-            <span style={{fontSize:18}}>🚧</span><div style={{flex:1}}><b style={{color:"var(--stamp)",fontSize:13}}>{friend?.name}님의 영토</b><div style={{fontSize:12,color:"var(--ink-soft)"}}>통행료 {TOLL}🪙{trip.useExempt?" · 면제권 적용":" 발생"}</div></div>
+            <span style={{fontSize:18}}>{trip.locked?"🔒":"⚔️"}</span><div style={{flex:1}}><b style={{color:"var(--stamp)",fontSize:13}}>{friend?.name}님의 영토 · 도전</b><div style={{fontSize:12,color:"var(--ink-soft)"}}>
+              {trip.locked ? "타일 잠금이 걸려 있어요 · 이번 도전은 막혀요"
+                : `미션 3개를 모두 인증하면 이 땅을 가져와요 · 실패하면 통행료 ${TOLL}🪙`}
+            </div></div>
           </div>)}
 
         {step===0 && (<>

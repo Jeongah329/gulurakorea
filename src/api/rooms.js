@@ -164,6 +164,14 @@ export async function syncScore(code, myId, score) {
 }
 
 /** 방 나가기 — 내 멤버 항목만 제거 (다른 사람 데이터는 그대로 남는다) */
+/* 내 타일에 잠금을 걸거나 푼다 (땅따먹기 방어) */
+export async function syncLock(code, sggCode, locked) {
+  if (!db || !code) return;
+  await updateDoc(doc(db, "rooms", String(code).toUpperCase()), {
+    ["locks." + sggCode]: locked ? true : deleteField(),
+  });
+}
+
 export async function leaveRoomOnline(code, myId) {
   if (!code) return;
   const ref = doc(db, ROOMS, code);

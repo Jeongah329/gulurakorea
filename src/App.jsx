@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { kakaoRegionAny } from "./api/kakao.js";
 import {
   createRoomOnline, getMyId, getMyName, joinRoomOnline,
-  leaveRoomOnline, setMyName as persistMyName, subscribeRoom, syncOwnership, syncScore,
+  leaveRoomOnline, setMyName as persistMyName, subscribeRoom, syncLock, syncOwnership, syncScore,
 } from "./api/rooms.js";
 import { isFirebaseConfigured } from "./firebase.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
@@ -30,6 +30,7 @@ export default function App(){
   const [pendingJoinCode,setPendingJoinCode] = useState("");
   const [myId] = useState(()=>getMyId());
   const [myName,setMyNameState] = useState(()=>getMyName());
+  const [locks,setLocks] = useState({});   // {시군구코드:true} — 잠금이 걸린 타일
   const [ownership,setOwnership] = useState({}); // sggCode -> memberId (홈 서울은 sido 검사로 처리)
   const [trips,setTrips] = useState([]);
   const [cards,setCards] = useState([]);
@@ -77,6 +78,7 @@ export default function App(){
       const mapped = {};
       Object.entries(remoteOwnership).forEach(([sgg,pid])=>{ mapped[sgg] = pid===myId ? "me" : pid; });
       setOwnership(mapped);
+      setLocks(data.locks || {});
       const remoteMembers = Object.entries(data.members||{})
         .filter(([pid])=>pid!==myId)
         .map(([pid,m])=>({ id:pid, name:m.name||"친구", color:m.color||"#999", score:m.score||0 }));
@@ -156,8 +158,10 @@ export default function App(){
 
   function startTrip(){
     if(!candidate) return;
+    /* 남이 가진 땅이면 도전 — 미션 3개를 모두 인증해야 뺏을 수 있다 */
+    const locked = !!locks[candidate.sgg];
     const outcome = destOwner==="me" ? "revisit" : tollDue ? "toll" : "conquer";
-    setActiveTrip({ ...candidate, outcome, tollFriend: tollDue?destOwner:null, useExempt,
+    setActiveTrip({ ...candidate, outcome, locked, tollFriend: tollDue?destOwner:null, useExempt,
       missions: candidate.missions.map(m=>({ ...m, method:methodFor(m.t), done:false, receipt:null, gps:null })) });
     setPhase("main"); setCandidate(null); setDroppedCard(null); setUseExempt(false); setTab("main"); setVerifyOpen(true);
   }
@@ -179,11 +183,30 @@ export default function App(){
     const t = activeTrip; if(!t) return null;
     const doneCount = t.missions.filter(m=>m.done).length;
     const perfect = doneCount===t.missions.length;
-    let base, label;
+    let base, label, challengeResult=null;
     if(t.outcome==="conquer"){ base=t.depop?200:100; setOwnership(o=>({...o,[t.sgg]:"me"})); if(room?.code) syncOwnership(room.code, myId, t.sgg); label=`${t.sigungu} 점령`; setCoins(c=>c+(t.depop?60:30)); }
-    else if(t.outcome==="toll"){ base=40; const f=memberById(t.tollFriend);
-      if(t.useExempt && inventory.some(c=>c.id==="toll")){ setInventory(inv=>{const i=inv.findIndex(c=>c.id==="toll");return inv.filter((_,k)=>k!==i);}); label=`${f?.name}님 땅 통과(면제권)`; }
-      else { setCoins(c=>Math.max(0,c-TOLL)); label=`통행료 ${TOLL}🪙 지불`; } }
+    else if(t.outcome==="toll"){
+      const f=memberById(t.tollFriend);
+      if(t.locked){
+        /* 상대가 타일 잠금을 걸어둔 땅 — 도전이 막히고 통행료도 안 낸다 */
+        base=40; label=`${f?.name||"상대"}님 타일 잠금 · 도전 실패`;
+        if(room?.code) syncLock(room.code, t.sgg, false);
+        setLocks(l=>{ const n={...l}; delete n[t.sgg]; return n; });
+        challengeResult="blocked";
+      } else if(perfect){
+        /* 미션 3개 완주 = 도전 성공, 땅을 빼앗는다 */
+        base=t.depop?200:100;
+        setOwnership(o=>({...o,[t.sgg]:"me"})); if(room?.code) syncOwnership(room.code, myId, t.sgg);
+        label=`${f?.name||"상대"}님 땅 탈환 · ${t.sigungu} 점령`;
+        setCoins(c=>c+(t.depop?60:30));
+        challengeResult="win";
+      } else {
+        base=40;
+        if(t.useExempt && inventory.some(c=>c.id==="toll")){ setInventory(inv=>{const i=inv.findIndex(c=>c.id==="toll");return inv.filter((_,k)=>k!==i);}); label=`${f?.name}님 땅 통과(면제권)`; }
+        else { setCoins(c=>Math.max(0,c-TOLL)); label=`통행료 ${TOLL}🪙 지불`; }
+        challengeResult="fail";
+      }
+    }
     else { base=50; label="내 영토 재방문"; }
     const bonus = doneCount*20 + (perfect?30:0);
     const total = base+bonus;
@@ -191,10 +214,21 @@ export default function App(){
     const newCards = t.missions.filter(m=>m.done).map(m=>({ title:m.n, place:`${t.sido} ${t.sigungu}`, type:m.method==="receipt"?"영수증":"인증샷", grad:t.grad, depop:t.depop }));
     setCards(c=>[...newCards,...c]);
     setTrips(tp=>[{title:t.title,sido:t.sido,sigungu:t.sigungu,depop:t.depop,outcome:t.outcome,verified:doneCount,score:total},...tp]);
-    return { label, base, bonus, total, doneCount, perfect, cardsGained:newCards.length, outcome:t.outcome };
+    return { label, base, bonus, total, doneCount, perfect, challengeResult, cardsGained:newCards.length, outcome:t.outcome };
   }
   function finishTrip(){ const res=applyConquer(); if(res){ setResult(res); setVerifyOpen(false); } }
   function closeResult(){ setResult(null); setActiveTrip(null); setTab("map"); }
+  /* 타일 잠금 카드 사용 — 내 땅 한 곳에 잠금을 걸어 도전 1회를 막는다 */
+  function useLockCard(sgg){
+    if(!inventory.some(c=>c.id==="lock")){ flash("타일 잠금 카드가 없어요"); return; }
+    if(ownership[sgg]!=="me"){ flash("내 땅에만 걸 수 있어요"); return; }
+    if(locks[sgg]){ flash("이미 잠겨 있어요"); return; }
+    setInventory(inv=>{ const i=inv.findIndex(c=>c.id==="lock"); return inv.filter((_,k)=>k!==i); });
+    setLocks(l=>({...l,[sgg]:true}));
+    if(room?.code) syncLock(room.code, sgg, true);
+    flash("타일 잠금 · 도전 1회를 막아요");
+  }
+
   function updateMyName(n){ setMyNameState(n); persistMyName(n); }
 
   async function joinRoom(code){
@@ -230,8 +264,8 @@ export default function App(){
         </header>
         <main style={S.body} className="app-body scroll">
           {tab==="main" && <MainScreen {...{themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify:()=>setVerifyOpen(true),finishTrip,origin,apiStatus}}/>}
-          {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured}}/>}
-          {tab==="rank" && <RankScreen {...{myRoomScore,myRoomRegions,room,memberCount:members.length}}/>}
+          {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured,locks,useLockCard,hasLockCard:inventory.some(c=>c.id==="lock")}}/>}
+          {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks}}/>}
           {tab==="my" && <MyScreen {...{score,coins,inventory,ownedCount,trips,cards,room,resetDemo,apiStatus,origin}}/>}
         </main>
         <nav className="app-nav" style={S.tabbar}>

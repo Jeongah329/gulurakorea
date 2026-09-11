@@ -30,12 +30,3 @@ export const TOLL = 30;
 
 export const methodFor = (t)=> t==="맛집" ? "receipt" : "gps";
 
-export const NATIONAL_ROOMS = [
-  { id:"r1", name:"강남 원정대", score:3240, regions:54 },
-  { id:"r2", name:"전국구 클럽", score:2680, regions:47 },
-  { id:"r3", name:"주말여행단", score:2050, regions:38 },
-  { id:"r4", name:"도장깨기 모임", score:1560, regions:29 },
-  { id:"r5", name:"느긋한 방랑단", score:1120, regions:22 },
-  { id:"r6", name:"퇴근후 떠나기", score:760, regions:15 },
-  { id:"r7", name:"새내기 여행방", score:430, regions:9 },
-];

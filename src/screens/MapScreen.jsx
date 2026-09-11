@@ -9,7 +9,7 @@ import { Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
-export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online}){
+export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,locks,useLockCard,hasLockCard}){
   const [view,setView] = useState("real");
   const [joining,setJoining] = useState(()=>!!pendingJoinCode);
   const [codeInput,setCodeInput] = useState(()=>pendingJoinCode||"");
@@ -42,7 +42,7 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
       <button onClick={()=>setView("tiles")} style={{...S.viewBtn,...(view==="tiles"?S.viewOn:{})}}>타일</button>
     </div>
 
-    {view==="real" ? <RealMap {...{ownership,ownerColor,memberById,activeSgg}}/> : <TileBoard {...{ownership,ownerColor,memberById,members,room,activeSgg}}/>}
+    {view==="real" ? <RealMap {...{ownership,ownerColor,memberById,activeSgg}}/> : <TileBoard {...{ownership,ownerColor,memberById,members,room,activeSgg,locks,useLockCard,hasLockCard}}/>}
 
     <div style={S.legend}>{members.map(m=><Lg key={m.id} c={m.color} t={m.id==="me"?"나":m.name}/>)}<Lg c="var(--paper-2)" t="미점령" border/></div>
 
@@ -109,7 +109,9 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg}){
   );
 }
 
-export function TileBoard({ownership,ownerColor,memberById,members,room,activeSgg}){
+export function TileBoard({ownership,ownerColor,memberById,members,room,activeSgg,locks={},useLockCard,hasLockCard}){
+  const [open,setOpen] = useState(()=>new Set());   // 펼쳐진 시·도
+  const toggle = (sd)=> setOpen(prev=>{ const n=new Set(prev); n.has(sd)?n.delete(sd):n.add(sd); return n; });
   const groups = useMemo(()=>{
     const g={}; BOARD.forEach(t=>{(g[t.sido]=g[t.sido]||[]).push(t);});
     return SIDO_ORDER.filter(sd=>g[sd]).map(sd=>({sido:sd,tiles:g[sd]}));
@@ -124,28 +126,42 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
         </div>
         {room && <span style={S.livePill}><span style={S.liveDot}/> LIVE · 시즌 1</span>}
       </div>
+      <div style={S.boardLegend}>
+        <span><i style={{...S.boardLegendDot,border:"2px solid #FFD23F"}}/>내가 점령</span>
+        <span><i style={{...S.boardLegendDot,border:"2px solid rgba(255,255,255,.25)"}}/>비어 있음</span>
+        <span>☀️ ×2 인구감소지역 · 점수 2배</span>
+        <span>🔒 잠금 · 도전 1회 방어</span>
+      </div>
       {groups.map(g=>{
         const total=g.tiles.length;
         const mine=g.tiles.filter(t=>ownership[t.code]==="me").length;
-        return (<div key={g.sido} style={{marginBottom:20}}>
-          <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:11}}>
+        const expanded = open.has(g.sido) || g.tiles.some(t=>t.code===activeSgg);
+        return (<div key={g.sido} style={{marginBottom:expanded?20:8}}>
+          <button onClick={()=>toggle(g.sido)} style={S.boardSidoRow}>
             <span style={{width:4,height:17,borderRadius:3,background:SIDO_ACCENT[g.sido]||"#888"}}/>
             <span style={S.boardSido}>{SIDO_FULL[g.sido]||g.sido}</span>
             <span style={S.boardCount}>{mine}/{total} 점령</span>
-          </div>
-          <div style={S.bGrid}>
+            <span style={{marginLeft:"auto",fontSize:12,color:"#8A93AD"}}>{expanded?"▲":"▼"}</span>
+          </button>
+          {expanded && <div style={S.bGrid}>
             {g.tiles.map(t=>{
               const owner=ownership[t.code]; const isMe=owner==="me";
               const mem = owner&&!isMe? memberById(owner):null;
-              const accent = isMe?"#2EB872":mem?mem.color:(t.depop?"#E3A92C":"rgba(255,255,255,.08)");
+              /* 테두리: 내가 점령 = 금색, 다른 사람 = 그 사람 색, 나머지 = 무채색 */
+              const accent = isMe?"#FFD23F":mem?mem.color:"rgba(255,255,255,.08)";
               const owned = isMe||mem;
               const pts = t.depop? t.pt*2 : t.pt;
               const active = t.code===activeSgg;
-              return (<div key={t.code} className={active?"tileBlink":""} style={{...S.bTile, border:`2px solid ${active?"#F2913C":accent}`,
-                background: owned? `${accent}22` : (t.depop?"rgba(227,169,44,.07)":"#18233A")}}>
+              const locked = !!locks[t.code];
+              const canLock = isMe && hasLockCard && !locked;
+              return (<div key={t.code} className={active?"tileBlink":""}
+                onClick={canLock? ()=>useLockCard(t.code) : undefined}
+                style={{...S.bTile, border:`2px solid ${active?"#F2913C":accent}`, cursor:canLock?"pointer":"default",
+                background: owned? `${accent}22` : "#18233A"}}>
+                {locked && <span style={{position:"absolute",top:6,right:7,fontSize:12}}>🔒</span>}
                 {active && <span style={S.bLive}>여행 중</span>}
                 {t.depop && <span style={S.bSun}>☀️</span>}
-                {owned && <span style={{...S.bBadge,background:isMe?"#2EB872":mem.color}}>{isMe?"나":mem.name}</span>}
+                {owned && <span style={{...S.bBadge,background:isMe?"#FFD23F":mem.color,color:isMe?"#16223F":"#fff"}}>{isMe?"나":mem.name}</span>}
                 <div style={{fontSize:24,textAlign:"center",marginTop:t.depop||owned?7:2}}>{t.icon}</div>
                 <div style={{textAlign:"center",marginTop:5}}>
                   <span style={{fontSize:12.5,fontWeight:800,color:"#EAEFFA"}}>{t.name}</span>
@@ -154,7 +170,7 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
                 <div style={{textAlign:"center",fontSize:11,fontWeight:700,color:t.depop?"#E3A92C":"#8A93AD",marginTop:2}}>{pts}pt</div>
               </div>);
             })}
-          </div>
+          </div>}
         </div>);
       })}
     </div>
