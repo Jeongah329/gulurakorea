@@ -118,7 +118,11 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
 
         {step===1 && (<>
           <p style={{fontFamily:"'HiKR',sans-serif",fontSize:15,color:"var(--ink)"}}>추가 미션 <span style={{fontSize:12,fontFamily:"'MiceGothic',sans-serif",color:"var(--ink-soft)",fontWeight:600}}>· 인증당 +20점</span></p>
-          <p style={{fontSize:12.5,color:"var(--ink-soft)",margin:"4px 0 14px"}}>맛집은 영수증, 체험은 위치로 인증해요. 모두 인증하면 메인에서 점령할 수 있어요.</p>
+          <p style={{fontSize:12.5,color:"var(--ink-soft)",margin:"4px 0 14px"}}>
+            {others.length===0
+              ? "이곳은 도착 인증만으로 점령할 수 있어요. 메인에서 점령하기를 눌러주세요."
+              : "맛집은 영수증, 체험은 위치로 인증해요. 모두 인증하면 메인에서 점령할 수 있어요."}
+          </p>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {others.map(m=>(<div key={m.i} style={{...S.vCard,...(m.done?S.vCardDone:{})}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -170,7 +174,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
       </div>
 
       {step===0 && arrival.done && (<div style={S.vfFoot}><button onClick={()=>setStep(1)} style={S.vfPrimary}>다음 · 미션 인증</button></div>)}
-      {step===1 && (<div style={S.vfFoot}><button onClick={onDone} style={S.vfPrimary}>{allDone?"인증 완료 — 메인에서 점령하기":`인증 완료 · ${doneCount}/3`}</button></div>)}
+      {step===1 && (<div style={S.vfFoot}><button onClick={onDone} style={S.vfPrimary}>{allDone?"인증 완료 — 메인에서 점령하기":`인증 완료 · ${doneCount}/${trip.missions.length}`}</button></div>)}
     {exemptFx && <CardUseOverlay icon="🧳" label={`"${exemptFx.name}" 면제 중…`}/>}
     </div>
   );

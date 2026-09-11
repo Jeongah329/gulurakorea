@@ -5,7 +5,7 @@ import CFG from "../config.js";
 import { DEPOP_SET } from "../data/depopulated.js";
 import { SAMPLE_POOL } from "../data/sampleDestinations.js";
 import { haversineKm } from "../lib/geo.js";
-import { sggFromAddr, shortSgg } from "../lib/sigungu.js";
+import { DOKDO_CODE, sggFromAddr, shortSgg } from "../lib/sigungu.js";
 import { stripTags } from "../lib/text.js";
 
 /* ═══════════════════════════════════════════════════════════
@@ -134,10 +134,15 @@ export function buildDest(it, origin) {
   const title = stripTags(it.title);
   if (!title) return null;
   const themes = classifyThemes(it);
+  /* 독도는 울릉군 안이지만 게임판에서는 별도 한 칸으로 다룬다 */
+  const isDokdo = /독도/.test(title) || /독도/.test(it.addr1 || "");
   return {
     contentid: String(it.contentid),
     contenttypeid: String(it.contenttypeid || "12"),
-    title, sido: sg.sido, sigungu: shortSgg(sg.name), sgg: sg.code,
+    title, sido: sg.sido,
+    sigungu: isDokdo ? "독도" : shortSgg(sg.name),
+    sgg: isDokdo ? DOKDO_CODE : sg.code,
+    dokdo: isDokdo,
     themes, depop: DEPOP_SET.has(sg.sido + "|" + sg.name),
     lat, lng, addr: it.addr1 || "",
     image: it.firstimage || it.firstimage2 || "",
@@ -235,8 +240,10 @@ export async function enrichDestination(d) {
   return Object.assign({}, d, {
     overview: ov || (d.addr ? d.addr + " · 한국관광공사 관광정보 등록지" : d.sido + " " + d.sigungu + "의 관광지입니다."),
     image: d.image || c.firstimage || "",
-    missionPool: { "맛집": foods, "체험": plays },
-    missions: [
+    missionPool: d.dokdo ? {} : { "맛집": foods, "체험": plays },
+    missions: d.dokdo ? [
+      { n: "독도 도착 인증", t: "명소" },
+    ] : [
       { n: d.title + " 도착 인증", t: "명소" },
       { n: foods[0] ? foods[0].name + " 맛보기" : d.sigungu + " 로컬 맛집", t: "맛집",
         place: foods[0] || null },

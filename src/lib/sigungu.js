@@ -29,6 +29,9 @@ export function sggFromAddr(addr, sidoHint) {
 /* 게임판 기준 코드.
    · 특별시·광역시 7곳은 자치구를 나누지 않고 시 단위 한 칸
    · 일반구를 둔 시(수원·성남·창원·청주 등)도 시 단위 한 칸 */
+/* 독도 — 행정구역상 울릉군이지만 게임판에서는 한 칸으로 따로 둔다 */
+export const DOKDO_CODE = "37900";
+
 export const METRO = { "11":"11000","21":"21000","22":"22000","23":"23000","24":"24000","25":"25000","26":"26000" };
 
 /* 일반구를 가진 시 — 자치구를 나누지 않고 시 한 칸으로 묶는다 */
@@ -70,6 +73,7 @@ export const CITY_MERGE = {
 
 export function boardCode(code){
   const c = String(code || "");
+  if (c === DOKDO_CODE) return DOKDO_CODE;
   return METRO[c.slice(0,2)] || CITY_MERGE[c] || c;
 }
 
