@@ -181,3 +181,9 @@ export function inviteLink(code) {
     return CFG.siteUrl + "?join=" + encodeURIComponent(code);
   }
 }
+
+/* 카카오톡 공유 카드에 들어갈 이미지.
+   카카오 서버가 직접 받아가므로 반드시 공개된 절대 주소여야 한다. */
+export function shareImage(){
+  return CFG.siteUrl.replace(/\/+$/, "") + "/og.png";
+}

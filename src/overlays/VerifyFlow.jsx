@@ -1,22 +1,28 @@
 /**
  * 도착 인증 · 미션 인증 오버레이
  */
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { kakaoRouteUrl } from "../api/kakao.js";
 import { verifyArrivalReal, verifyGps, verifyReceipt } from "../api/verification.js";
 import { TOLL } from "../data/constants.js";
 import { KakaoMap } from "../ui/KakaoMap.jsx";
-import { Chk } from "../ui/primitives.jsx";
+import { CARD_USE_MS, CardUseOverlay, Chk } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
-export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, memberById, flash }){
+export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, memberById, flash, hasExemptCard, useMissionExemptCard }){
   const arrivalIdx = trip.missions.findIndex(m=>m.t==="명소");
   const [step,setStep] = useState(trip.missions[arrivalIdx]?.done?1:0);
   const [scanning,setScanning] = useState(false);
   const [parsed,setParsed] = useState(null);
   const [locating,setLocating] = useState(false);
   const [locMsg,setLocMsg] = useState("");
-  const fileRef = useRef(null); const pendRef = useRef(-1);
+  const fileRef = useRef(null); const pendRef = useRef(-1); const exemptTimer = useRef(null);
+  const [exemptFx,setExemptFx] = useState(null); // {idx,name} — 🧳 미션 면제 카드 사용 연출
+  useEffect(()=>()=>clearTimeout(exemptTimer.current),[]);
+  function playExempt(idx,name){
+    setExemptFx({ idx, name });
+    exemptTimer.current = setTimeout(()=>{ useMissionExemptCard(idx); setExemptFx(null); }, CARD_USE_MS);
+  }
   const [pickerIdx,setPickerIdx] = useState(-1);   // 장소 고르기 목록이 열린 미션 번호
   const arrival = trip.missions[arrivalIdx];
   const others = trip.missions.map((m,i)=>({...m,i})).filter(o=>o.i!==arrivalIdx);
@@ -116,12 +122,13 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {others.map(m=>(<div key={m.i} style={{...S.vCard,...(m.done?S.vCardDone:{})}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:20}}>{m.done?"✅":m.method==="receipt"?"🧾":"📍"}</span>
+                <span style={{fontSize:20}}>{m.exempt?"🧳":m.done?"✅":m.method==="receipt"?"🧾":"📍"}</span>
                 <div style={{flex:1}}><span style={{fontSize:14,fontWeight:800,color:"var(--ink)"}}>{m.n}</span>
                   <div style={{fontSize:11.5,color:"var(--ink-soft)"}}>{m.done?(m.method==="receipt"?`${m.receipt.store} · ${m.receipt.amount.toLocaleString()}원`:`반경 ${m.gps.dist}m 인증`):(m.method==="receipt"?"영수증으로 인증":"위치로 인증")}</div></div>
                 {!m.done && <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
                   <button onClick={()=>m.method==="receipt"?pickReceipt(m.i):doGps(m.i)} disabled={locating} style={{...S.vBtn,opacity:locating&&m.method!=="receipt"?.6:1}}>{m.method==="receipt"?"영수증":(locating?"확인 중…":"위치 확인")}</button>
                   {m.method!=="receipt" && <button onClick={()=>demoGps(m.i)} style={S.demoMini}>데모</button>}
+                  {hasExemptCard && <button disabled={!!exemptFx} onClick={()=>playExempt(m.i,m.n)} style={{...S.demoMini,opacity:exemptFx?.6:1}}>🧳 면제권</button>}
                 </div>}
               </div>
 
@@ -164,6 +171,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
 
       {step===0 && arrival.done && (<div style={S.vfFoot}><button onClick={()=>setStep(1)} style={S.vfPrimary}>다음 · 미션 인증</button></div>)}
       {step===1 && (<div style={S.vfFoot}><button onClick={onDone} style={S.vfPrimary}>{allDone?"인증 완료 — 메인에서 점령하기":`인증 완료 · ${doneCount}/3`}</button></div>)}
+    {exemptFx && <CardUseOverlay icon="🧳" label={`"${exemptFx.name}" 면제 중…`}/>}
     </div>
   );
 }

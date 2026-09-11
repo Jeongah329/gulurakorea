@@ -4,6 +4,44 @@
 import React from "react";
 import { S } from "./styles.js";
 
+export const CARD_USE_MS = 800; // 카드 뒤집힘 연출 재생 시간 — 이 시간이 지난 뒤 실제 효과가 적용됨
+
+/** 카드가 뒤집히며 반짝이는 "사용 중" 연출 본체 (배경 없이 내용만) */
+export function CardFlipFX({ icon, label, labelColor="var(--ink-soft)" }) {
+  const sparks = Array.from({ length: 14 }).map((_, i) => {
+    const a = (i / 14) * Math.PI * 2;
+    const r = 46 + ((i * 23) % 30);
+    return {
+      tx: Math.cos(a) * r, ty: Math.sin(a) * r, d: 0.12 + (i % 5) * 0.05,
+      sz: i % 3 === 0 ? 7 : 5,
+      c: i % 3 === 0 ? "var(--gold)" : i % 3 === 1 ? "#FFF3CE" : "#FFD98A",
+    };
+  });
+  return (
+    <div className="use-in" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "26px 0 16px", minHeight: 190 }}>
+      <span className="card-use-glow" style={{ position: "absolute", top: "40%", left: "50%", width: 116, height: 116, borderRadius: "50%", background: "radial-gradient(circle, rgba(227,169,44,.55), rgba(227,169,44,0) 70%)", pointerEvents: "none" }} />
+      {sparks.map((b, i) => (
+        <span key={i} className="burst" style={{ "--tx": `${b.tx}px`, "--ty": `${b.ty}px`, animationDelay: `${b.d}s`, position: "absolute", top: "42%", left: "50%", width: b.sz, height: b.sz, borderRadius: "50%", background: b.c, boxShadow: `0 0 ${b.sz + 3}px rgba(255,215,120,.9)`, pointerEvents: "none", zIndex: 3 }} />
+      ))}
+      <div style={{ perspective: 600, position: "relative", zIndex: 2 }}>
+        <div className="card-use-flip" style={{ width: 86, height: 118, borderRadius: 14, background: "linear-gradient(160deg, var(--stamp), var(--stamp-deep))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 26px rgba(11,20,38,.4)" }}>
+          <span style={{ fontSize: 40 }}>{icon}</span>
+        </div>
+      </div>
+      <p style={{ marginTop: 16, fontSize: 12.5, fontWeight: 800, color: labelColor }}>{label}</p>
+    </div>
+  );
+}
+
+/** 마이 탭 시트 바깥(여행 인증·지도·주사위 화면)에서 카드를 바로 쓸 때 덮는 전체 오버레이 */
+export function CardUseOverlay({ icon, label }) {
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(13,23,48,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 120 }} className="overlay-in">
+      <CardFlipFX icon={icon} label={label} labelColor="#fff" />
+    </div>
+  );
+}
+
 export function Section({title,sub,children}){return (<section style={S.section}><div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:10}}><h3 style={S.secTitle}>{title}</h3>{sub && <span style={{fontSize:11.5,color:"var(--ink-soft)"}}>{sub}</span>}</div>{children}</section>);}
 
 export function Meta({k,v,hi}){return (<div style={{flex:1,textAlign:"center"}}><div style={{fontSize:11,color:"var(--ink-soft)",marginBottom:3}}>{k}</div><div style={{fontFamily:"'HiKR',sans-serif",fontSize:17,color:hi?"var(--stamp)":"var(--ink)"}}>{v}</div></div>);}
@@ -68,7 +106,7 @@ export function Splash({onStart}){
       </div>
       <div style={{padding:"0 26px 30px"}}>
         <button onClick={onStart} style={S.splashBtn}>여행 시작 🧳</button>
-        <p style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,.72)",marginTop:12}}>전국 시·군·구 땅따먹기 · 시즌 1</p>
+        <p style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,.72)",marginTop:12}}>전국 땅따먹기</p>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
  * 친구 초대 — 링크 / 카카오톡 공유
  */
 import React from "react";
-import { inviteLink, loadKakaoShare } from "../api/kakao.js";
+import { inviteLink, loadKakaoShare, shareImage } from "../api/kakao.js";
 import { S } from "../ui/styles.js";
 
 export function ShareModal({ room, onClose, flash }){
@@ -19,7 +19,13 @@ export function ShareModal({ room, onClose, flash }){
       if(!Kakao.Share || typeof Kakao.Share.sendDefault!=="function") throw new Error("공유 API를 사용할 수 없습니다 · Kakao Developers 콘솔에서 '카카오톡 공유'가 활성화돼 있는지 확인하세요");
       Kakao.Share.sendDefault({
         objectType:"feed",
-        content:{ title:"대한민국 부루마블", description:`${code} 방에 초대되었어요. 링크를 열면 초대 코드가 자동으로 입력돼요.`, imageUrl:"https://placehold.co/800x400/131F3C/F4EDDF/png?text=%EB%8C%80%ED%95%9C%EB%AF%BC%EA%B5%AD+%EB%B6%80%EB%A3%A8%EB%A7%88%EB%B8%94", link:{ mobileWebUrl:link, webUrl:link } },
+        content:{
+          title:"대한민국 부루마블",
+          description:`${code} 방에 초대되었어요. 링크를 열면 초대 코드가 자동으로 입력돼요.`,
+          imageUrl: shareImage(),
+          imageWidth: 1200, imageHeight: 630,
+          link:{ mobileWebUrl:link, webUrl:link },
+        },
         buttons:[{ title:"코드 입력하고 참여하기", link:{ mobileWebUrl:link, webUrl:link } }],
       });
     }catch(e){

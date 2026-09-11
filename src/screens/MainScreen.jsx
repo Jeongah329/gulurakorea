@@ -7,7 +7,14 @@ import { Section } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 메인 ───────── */
-export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify,finishTrip,origin,apiStatus}){
+export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify,finishTrip,origin,apiStatus,
+  boostIgnoreDist,boostAdjacent,bonusActive,rushCharges}){
+  const pending = [
+    boostIgnoreDist && {icon:"📍",label:"거리 무시 예약됨"},
+    boostAdjacent && {icon:"🧭",label:"인접 지역 예약됨"},
+    bonusActive && {icon:"⭐",label:"점령 보너스 예약됨"},
+    rushCharges>0 && {icon:"🔥",label:`여행 러시 ${rushCharges}회 대기`},
+  ].filter(Boolean);
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
     <div style={S.hello}>
       <p style={{fontSize:13,color:"var(--ink-soft)"}}>오늘의 출발지</p>
@@ -18,6 +25,7 @@ export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDu
         <span>{apiStatus.mode==="live" ? "TourAPI 4.0 실시간 연결됨" : apiStatus.mode==="sample" ? ("샘플 데이터 사용 중 · "+(apiStatus.msg||"API 응답 없음")) : "TourAPI 4.0 대기 중 · 주사위를 굴리면 조회합니다"}</span>
       </div>
     </div>
+    {pending.length>0 && <div style={S.pendingRow}>{pending.map((p,i)=><span key={i} style={S.pendingTag}>{p.icon} {p.label}</span>)}</div>}
     {activeTrip ? (
       <ActiveTripCard trip={activeTrip} openVerify={openVerify} finishTrip={finishTrip}/>
     ) : (<>

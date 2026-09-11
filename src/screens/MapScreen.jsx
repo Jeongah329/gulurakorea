@@ -1,15 +1,15 @@
 /**
  * 지도 탭 — 실제 경계 지도와 타일 보드
  */
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { BOARD, SIDO_ACCENT, SIDO_FULL } from "../data/board.js";
 import { SIDO_ORDER, TOLL } from "../data/constants.js";
 import { SIGUNGU, boardCode, outlineOf } from "../lib/sigungu.js";
-import { Lg } from "../ui/primitives.jsx";
+import { CARD_USE_MS, CardUseOverlay, Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
-export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,locks,useLockCard,hasLockCard,homeSet,homeCand,claimHome}){
+export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard}){
   const [view,setView] = useState("real");
   const [joining,setJoining] = useState(()=>!!pendingJoinCode);
   const [codeInput,setCodeInput] = useState(()=>pendingJoinCode||"");
@@ -60,7 +60,7 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
         )}
       </div>
     )}
-    {view==="real" ? <RealMap {...{ownership,ownerColor,memberById,activeSgg}}/> : <TileBoard {...{ownership,ownerColor,memberById,members,room,activeSgg,locks,useLockCard,hasLockCard}}/>}
+    {view==="real" ? <RealMap {...{ownership,ownerColor,memberById,activeSgg,protectedRegions,throneRegion,hasProtectCard,useProtectionCard}}/> : <TileBoard {...{ownership,ownerColor,memberById,members,room,activeSgg,protectedRegions,throneRegion}}/>}
 
     <div style={S.legend}>{members.map(m=><Lg key={m.id} c={m.color} t={m.id==="me"?"나":m.name}/>)}<Lg c="var(--paper-2)" t="미점령" border/></div>
 
@@ -105,7 +105,14 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
   </div>);
 }
 
-export function RealMap({ownership,ownerColor,memberById,activeSgg}){
+export function RealMap({ownership,ownerColor,memberById,activeSgg,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard}){
+  const [protectFx,setProtectFx] = useState(null);
+  const protectTimer = useRef(null);
+  useEffect(()=>()=>clearTimeout(protectTimer.current),[]);
+  function playProtect(code,name){
+    setProtectFx({ code, name });
+    protectTimer.current = setTimeout(()=>{ useProtectionCard(code,true); setProtectFx(null); }, CARD_USE_MS);
+  }
   const [sel,setSel] = useState(null);   // 선택된 게임판 코드
   const selOwner = sel ? ownership[sel] : null;
   /* 게임판 코드별로 폴리곤을 묶는다. 서울·수원처럼 합쳐진 곳은 여러 조각이 한 덩어리가 된다. */
@@ -143,13 +150,18 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg}){
       </svg>
       {selGroup && (<div style={S.selBar}><b style={{color:"var(--ink)"}}>{selGroup.sido===selGroup.name ? selGroup.name : `${selGroup.sido} ${selGroup.name}`}</b>
         <span style={{marginLeft:8,fontSize:12.5,color:"var(--ink-soft)"}}>{selOwner==="me"?"나의 영토":selOwner?`${memberById(selOwner)?.name}님의 영토`:"미점령"}</span>
+        {sel===throneRegion && <span style={{marginLeft:8,fontSize:12,color:"var(--gold)",fontWeight:800}}>👑 왕좌</span>}
+        {protectedRegions.includes(sel) && <span style={{marginLeft:8,fontSize:12,color:"var(--sea)",fontWeight:800}}>🛡️ 보호됨</span>}
+        {selOwner==="me" && !protectedRegions.includes(sel) && hasProtectCard &&
+          <button disabled={!!protectFx} onClick={()=>playProtect(sel, selGroup.sido===selGroup.name?selGroup.name:`${selGroup.sido} ${selGroup.name}`)} style={{marginLeft:"auto",...S.cardActBtn,opacity:protectFx?.6:1}}>🛡️ 보호 사용</button>}
         {selOwner && selOwner!=="me" && <span style={{marginLeft:"auto",fontSize:11.5,color:"var(--stamp)",fontWeight:700}}>통행료 {TOLL}🪙</span>}</div>)}
+      {protectFx && <CardUseOverlay icon="🛡️" label={`${protectFx.name} 보호 중…`}/>}
       <p style={{fontSize:11,color:"var(--ink-soft)",textAlign:"center",margin:"2px 0 2px"}}>인증한 시·군·구가 내 색으로 칠해져요 · 지역을 탭해보세요</p>
     </div>
   );
 }
 
-export function TileBoard({ownership,ownerColor,memberById,members,room,activeSgg,locks={},useLockCard,hasLockCard}){
+export function TileBoard({ownership,ownerColor,memberById,members,room,activeSgg,protectedRegions=[],throneRegion}){
   const [open,setOpen] = useState(()=>new Set());   // 펼쳐진 시·도
   const toggle = (sd)=> setOpen(prev=>{ const n=new Set(prev); n.has(sd)?n.delete(sd):n.add(sd); return n; });
   const groups = useMemo(()=>{
@@ -170,7 +182,7 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
         <span><i style={{...S.boardLegendDot,border:"2px solid #FFD23F"}}/>내가 점령</span>
         <span><i style={{...S.boardLegendDot,border:"2px solid rgba(255,255,255,.25)"}}/>비어 있음</span>
         <span>☀️ ×2 인구감소지역 · 점수 2배</span>
-        <span>🔒 잠금 · 도전 1회 방어</span>
+        <span>🛡️ 보호 · 도전 1회 방어</span>
       </div>
       {groups.map(g=>{
         const total=g.tiles.length;
@@ -192,13 +204,14 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
               const owned = isMe||mem;
               const pts = t.depop? t.pt*2 : t.pt;
               const active = t.code===activeSgg;
-              const locked = !!locks[t.code];
-              const canLock = isMe && hasLockCard && !locked;
+              const locked = protectedRegions.includes(t.code);
+              const canLock = false;
               return (<div key={t.code} className={active?"tileBlink":""}
-                onClick={canLock? ()=>useLockCard(t.code) : undefined}
+
                 style={{...S.bTile, border:`2px solid ${active?"#F2913C":accent}`, cursor:canLock?"pointer":"default",
                 background: owned? `${accent}22` : "#18233A"}}>
-                {locked && <span style={{position:"absolute",top:6,right:7,fontSize:12}}>🔒</span>}
+                {locked && <span style={{position:"absolute",top:6,right:7,fontSize:12}}>🛡️</span>}
+                {t.code===throneRegion && <span style={{position:"absolute",top:6,left:7,fontSize:12}}>👑</span>}
                 {active && <span style={S.bLive}>여행 중</span>}
                 {t.depop && <span style={S.bSun}>☀️</span>}
                 {owned && <span style={{...S.bBadge,background:isMe?"#FFD23F":mem.color,color:isMe?"#16223F":"#fff"}}>{isMe?"나":mem.name}</span>}
