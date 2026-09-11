@@ -21,4 +21,6 @@ export default {
   kakaoRest:   env.VITE_KAKAO_REST_KEY   || "",
   kakaoNative: env.VITE_KAKAO_NATIVE_KEY || "",
   kakaoProxy:  env.VITE_KAKAO_PROXY      || "",
+  /* 초대 링크에 쓸 서비스 주소. 미리보기 파일이나 로컬에서 열어도 항상 실서비스를 가리킨다. */
+  siteUrl:     env.VITE_SITE_URL         || "https://gulura-korea.netlify.app",
 };

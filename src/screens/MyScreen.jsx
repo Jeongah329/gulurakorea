@@ -14,7 +14,7 @@ export function MyScreen({score,coins,inventory,ownedCount,trips,cards,room,rese
   const [showAllCards,setShowAllCards] = useState(false);
   const shownCards = showAllCards ? cards : cards.slice(0,4);
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
-    <div style={S.profile}><div style={S.avatar}>👤</div><div><p style={{fontFamily:"'HiKR',sans-serif",fontSize:18,color:"var(--ink)"}}>여행자 #0427</p><p style={{fontSize:12,color:"var(--ink-soft)"}}>서울 출발 · {room?`방 ${room.code}`:"솔로 플레이"}</p></div></div>
+    <div style={S.profile}><div style={S.avatar}>👤</div><div><p style={{fontFamily:"'HiKR',sans-serif",fontSize:18,color:"var(--ink)"}}>여행자 #0427</p><p style={{fontSize:12,color:"var(--ink-soft)"}}>{origin?.label||"출발 지역 미설정"} · {room?`방 ${room.code}`:"솔로 플레이"}</p></div></div>
     <div style={S.statRow}><Stat k="점령 점수" v={score} c="var(--stamp)"/><Stat k="여행 코인" v={coins} c="var(--gold)"/><Stat k="정복 지역" v={ownedCount} c="var(--sea)"/></div>
     <div style={S.section}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>

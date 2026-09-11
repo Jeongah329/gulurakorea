@@ -165,9 +165,19 @@ export function loadKakaoShare() {
 
 /* 초대 링크: 현재 배포 주소 + ?join=코드 */
 export function inviteLink(code) {
-  if (typeof window === "undefined" || !window.location) return "?join=" + encodeURIComponent(code);
-  const u = new URL(window.location.href);
-  u.hash = ""; u.search = "";
-  u.searchParams.set("join", code);
-  return u.toString();
+  /* 기준 주소는 config.siteUrl 로 고정한다.
+     예전에는 현재 페이지 주소로 만들었는데, 미리보기 파일(file://)이나
+     로컬 개발 서버에서 공유하면 친구가 못 여는 링크가 만들어졌다. */
+  let base = CFG.siteUrl;
+  if (typeof window !== "undefined" && window.location && /^https?:$/.test(window.location.protocol)) {
+    base = window.location.origin + window.location.pathname;
+  }
+  try {
+    const u = new URL(base);
+    u.hash = ""; u.search = "";
+    u.searchParams.set("join", code);
+    return u.toString();
+  } catch (e) {
+    return CFG.siteUrl + "?join=" + encodeURIComponent(code);
+  }
 }

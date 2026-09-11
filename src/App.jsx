@@ -3,6 +3,7 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import { kakaoRegionAny } from "./api/kakao.js";
+import { boardCode, sggFromAddr } from "./lib/sigungu.js";
 import {
   createRoomOnline, getMyId, getMyName, joinRoomOnline,
   leaveRoomOnline, setMyName as persistMyName, subscribeRoom, syncLock, syncOwnership, syncScore,
@@ -31,7 +32,9 @@ export default function App(){
   const [myId] = useState(()=>getMyId());
   const [myName,setMyNameState] = useState(()=>getMyName());
   const [locks,setLocks] = useState({});   // {시군구코드:true} — 잠금이 걸린 타일
-  const [ownership,setOwnership] = useState({}); // sggCode -> memberId (홈 서울은 sido 검사로 처리)
+  const [ownership,setOwnership] = useState({}); // 게임판 코드 -> memberId
+  const [homeSet,setHomeSet] = useState(false);   // 출발 지역을 정했는지
+  const [homeCand,setHomeCand] = useState(null);  // 현재 위치로 찾은 출발 지역 후보
   const [trips,setTrips] = useState([]);
   const [cards,setCards] = useState([]);
   const [rollsLeft,setRollsLeft] = useState(5);
@@ -105,14 +108,24 @@ export default function App(){
           o.sub = `${lat.toFixed(4)}, ${lng.toFixed(4)} · 지명 조회 실패 — ${why.length > 110 ? why.slice(0,108) + "…" : why}`;
         }
         originRef.current=o; setOrigin(o);
+        /* 출발 지역 후보 — 아직 정하지 않았으면 현재 위치의 시·군·구를 제안한다 */
+        try{
+          const r2 = await kakaoRegionAny(lat,lng);
+          const hit = sggFromAddr([r2.sido,r2.sigungu].filter(Boolean).join(" "), r2.sido);
+          if(hit){
+            const bc = boardCode(hit.code);
+            const merged = bc !== hit.code;          // 서울·부산·대구·인천은 시 단위 한 칸
+            setHomeCand({ code: bc, sido: hit.sido, name: merged ? hit.sido : hit.name });
+          }
+        }catch(e){}
       },
       ()=>{}, { enableHighAccuracy:false, timeout:7000, maximumAge:600000 });
   },[]);
   function flash(msg){ setToast(msg); setTimeout(()=>setToast(null),2300); }
   const memberById = (id)=> members.find(m=>m.id===id);
   const ownerColor = (id)=> id? (memberById(id)?.color||"var(--paper-2)") : "var(--paper-2)";
-  const ownedCount = Object.values(ownership).filter(v=>v==="me").length + 1; // +1: 서울 홈
-  const myRegionCount = (id)=> Object.values(ownership).filter(v=>v===id).length + (id==="me"?1:0);
+  const ownedCount = Object.values(ownership).filter(v=>v==="me").length;
+  const myRegionCount = (id)=> Object.values(ownership).filter(v=>v===id).length;
   const memberScore = (id)=> id==="me" ? score : (memberById(id)?.score||0);
   const myRoomScore = members.reduce((s,m)=> s + memberScore(m.id), 0);
   const myRoomRegions = members.reduce((s,m)=> s + myRegionCount(m.id), 0);
@@ -159,7 +172,7 @@ export default function App(){
   function startTrip(){
     if(!candidate) return;
     /* 남이 가진 땅이면 도전 — 미션 3개를 모두 인증해야 뺏을 수 있다 */
-    const locked = !!locks[candidate.sgg];
+    const locked = !!locks[boardCode(candidate.sgg)];
     const outcome = destOwner==="me" ? "revisit" : tollDue ? "toll" : "conquer";
     setActiveTrip({ ...candidate, outcome, locked, tollFriend: tollDue?destOwner:null, useExempt,
       missions: candidate.missions.map(m=>({ ...m, method:methodFor(m.t), done:false, receipt:null, gps:null })) });
@@ -184,7 +197,7 @@ export default function App(){
     const doneCount = t.missions.filter(m=>m.done).length;
     const perfect = doneCount===t.missions.length;
     let base, label, challengeResult=null;
-    if(t.outcome==="conquer"){ base=t.depop?200:100; setOwnership(o=>({...o,[t.sgg]:"me"})); if(room?.code) syncOwnership(room.code, myId, t.sgg); label=`${t.sigungu} 점령`; setCoins(c=>c+(t.depop?60:30)); }
+    if(t.outcome==="conquer"){ base=t.depop?200:100; setOwnership(o=>({...o,[boardCode(t.sgg)]:"me"})); if(room?.code) syncOwnership(room.code, myId, boardCode(t.sgg)); label=`${t.sigungu} 점령`; setCoins(c=>c+(t.depop?60:30)); }
     else if(t.outcome==="toll"){
       const f=memberById(t.tollFriend);
       if(t.locked){
@@ -196,7 +209,7 @@ export default function App(){
       } else if(perfect){
         /* 미션 3개 완주 = 도전 성공, 땅을 빼앗는다 */
         base=t.depop?200:100;
-        setOwnership(o=>({...o,[t.sgg]:"me"})); if(room?.code) syncOwnership(room.code, myId, t.sgg);
+        setOwnership(o=>({...o,[boardCode(t.sgg)]:"me"})); if(room?.code) syncOwnership(room.code, myId, boardCode(t.sgg));
         label=`${f?.name||"상대"}님 땅 탈환 · ${t.sigungu} 점령`;
         setCoins(c=>c+(t.depop?60:30));
         challengeResult="win";
@@ -227,6 +240,15 @@ export default function App(){
     setLocks(l=>({...l,[sgg]:true}));
     if(room?.code) syncLock(room.code, sgg, true);
     flash("타일 잠금 · 도전 1회를 막아요");
+  }
+
+  /* 출발 지역 확정 — 조건 없이 그 지역 하나를 내 땅으로 준다 */
+  function claimHome(place){
+    if(!place || homeSet) return;
+    setOwnership(o=> o[place.code] ? o : ({...o,[place.code]:"me"}));
+    if(room?.code) syncOwnership(room.code, myId, place.code);
+    setHomeSet(true);
+    flash(`${place.name} · 출발 지역으로 등록했어요`);
   }
 
   function updateMyName(n){ setMyNameState(n); persistMyName(n); }
@@ -264,7 +286,7 @@ export default function App(){
         </header>
         <main style={S.body} className="app-body scroll">
           {tab==="main" && <MainScreen {...{themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify:()=>setVerifyOpen(true),finishTrip,origin,apiStatus}}/>}
-          {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured,locks,useLockCard,hasLockCard:inventory.some(c=>c.id==="lock")}}/>}
+          {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured,locks,useLockCard,hasLockCard:inventory.some(c=>c.id==="lock"),homeSet,homeCand,claimHome}}/>}
           {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks}}/>}
           {tab==="my" && <MyScreen {...{score,coins,inventory,ownedCount,trips,cards,room,resetDemo,apiStatus,origin}}/>}
         </main>

@@ -24,8 +24,12 @@ export function RankScreen({ownership,members,memberById,myRegionCount,memberSco
     });
     const depopVisited = BOARD.filter(t=>t.depop && ownership[t.code]==="me").length;
     const sidoRows = SIDO_ORDER.filter(sd=>bySido[sd]).map(sd=>({sido:sd,...bySido[sd]}));
+    /* 채운 비율 순 정렬 — 같으면 곳 수, 그다음 전국 순서 */
+    const ranked = [...sidoRows].sort((a,b)=> (b.room/b.total)-(a.room/a.total) || b.room-a.room);
+    const top10 = ranked.slice(0,10);
+    const rest = ranked.slice(10).filter(r=>r.room===0);
     const topSido = [...sidoRows].sort((a,b)=>b.mine-a.mine)[0];
-    return { roomOwned:owned.length, mine:mine.length, sidoRows, depopVisited, topSido };
+    return { roomOwned:owned.length, mine:mine.length, sidoRows, top10, rest, depopVisited, topSido };
   },[ownership]);
 
   const roster = useMemo(()=>{
@@ -79,20 +83,47 @@ export function RankScreen({ownership,members,memberById,myRegionCount,memberSco
         </div>
       </div>
 
-      {/* ③ 시·도별 채움 */}
+      {/* ③ 시·도 TOP 10 — 채운 비율 순 */}
       <div>
-        <h3 style={{...S.secTitle,marginBottom:10}}>시·도별 채움</h3>
-        <div style={{display:"flex",flexDirection:"column",gap:7}}>
-          {stat.sidoRows.map(r=>(
-            <div key={r.sido} style={{display:"flex",alignItems:"center",gap:9}}>
-              <span style={{width:74,fontSize:12,fontWeight:700,color:"var(--ink)"}}>{SIDO_FULL[r.sido]||r.sido}</span>
-              <span style={{flex:1,height:7,borderRadius:4,background:"var(--paper-2)",overflow:"hidden"}}>
-                <span style={{display:"block",height:"100%",width:`${r.room/r.total*100}%`,background:SIDO_ACCENT[r.sido]||"#888",borderRadius:4}}/>
-              </span>
-              <span style={{fontSize:11,color:"var(--ink-soft)",width:48,textAlign:"right"}}>{r.room}/{r.total}</span>
-            </div>
-          ))}
+        <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:12}}>
+          <h3 style={{...S.secTitle,margin:0}}>시·도 TOP 10</h3>
+          <span style={{fontSize:11.5,color:"var(--ink-soft)"}}>채운 비율 순</span>
         </div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {stat.top10.map((r,i)=>{
+            const color = SIDO_ACCENT[r.sido] || "#888";
+            const minePct = r.mine/r.total*100;
+            const otherPct = (r.room-r.mine)/r.total*100;
+            return (
+              <div key={r.sido} style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{...S.topRank,...(i<3?{background:color,color:"#fff"}:{})}}>{i+1}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:5}}>
+                    <span style={{fontSize:12.5,fontWeight:800,color:"var(--ink)"}}>{SIDO_FULL[r.sido]||r.sido}</span>
+                    <span style={{fontSize:11,color:"var(--ink-soft)"}}>{r.room}/{r.total}곳</span>
+                    <span style={{marginLeft:"auto",fontFamily:"'HiKR',sans-serif",fontSize:15,color:r.room?color:"var(--ink-soft)"}}>
+                      {Math.round(r.room/r.total*100)}%
+                    </span>
+                  </div>
+                  <div style={S.topTrack}>
+                    <span style={{display:"block",height:"100%",width:`${minePct}%`,background:"#E3A92C",float:"left"}}/>
+                    <span style={{display:"block",height:"100%",width:`${otherPct}%`,background:color,opacity:.55,float:"left"}}/>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",gap:14,marginTop:12,fontSize:11,color:"var(--ink-soft)"}}>
+          <span><i style={{...S.boardLegendDot,background:"#E3A92C"}}/>내가 점령</span>
+          <span><i style={{...S.boardLegendDot,background:"var(--ink-soft)",opacity:.55}}/>다른 사람</span>
+          <span><i style={{...S.boardLegendDot,background:"var(--paper-2)"}}/>비어 있음</span>
+        </div>
+        {stat.rest.length>0 && (
+          <p style={{fontSize:11.5,color:"var(--ink-soft)",marginTop:12,lineHeight:1.6}}>
+            아직 발길이 닿지 않은 곳 · {stat.rest.map(r=>SIDO_FULL[r.sido]||r.sido).join(" · ")}
+          </p>
+        )}
       </div>
 
       <p style={S.dataNote}>

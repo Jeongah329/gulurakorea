@@ -4,12 +4,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { BOARD, SIDO_ACCENT, SIDO_FULL } from "../data/board.js";
 import { SIDO_ORDER, TOLL } from "../data/constants.js";
-import { SIGUNGU } from "../lib/sigungu.js";
+import { SIGUNGU, boardCode, outlineOf } from "../lib/sigungu.js";
 import { Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
-export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,locks,useLockCard,hasLockCard}){
+export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,locks,useLockCard,hasLockCard,homeSet,homeCand,claimHome}){
   const [view,setView] = useState("real");
   const [joining,setJoining] = useState(()=>!!pendingJoinCode);
   const [codeInput,setCodeInput] = useState(()=>pendingJoinCode||"");
@@ -42,6 +42,24 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
       <button onClick={()=>setView("tiles")} style={{...S.viewBtn,...(view==="tiles"?S.viewOn:{})}}>타일</button>
     </div>
 
+    {!homeSet && (
+      <div style={S.homeCard}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{fontSize:18}}>📍</span>
+          <b style={{fontSize:14,color:"var(--ink)"}}>출발 지역을 정해주세요</b>
+        </div>
+        <p style={{fontSize:12,color:"var(--ink-soft)",lineHeight:1.55,marginBottom:11}}>
+          지금 계신 지역 한 곳을 조건 없이 내 땅으로 드려요. 여기서부터 전국을 넓혀가면 됩니다.
+        </p>
+        {homeCand ? (
+          <button onClick={()=>claimHome(homeCand)} style={{...S.roomPrimary,width:"100%"}}>
+            {homeCand.sido===homeCand.name ? homeCand.name : `${homeCand.sido} ${homeCand.name}`}에서 시작하기
+          </button>
+        ) : (
+          <p style={{fontSize:12,color:"var(--ink-soft)"}}>현재 위치를 확인하는 중이에요. 위치 권한을 허용해 주세요.</p>
+        )}
+      </div>
+    )}
     {view==="real" ? <RealMap {...{ownership,ownerColor,memberById,activeSgg}}/> : <TileBoard {...{ownership,ownerColor,memberById,members,room,activeSgg,locks,useLockCard,hasLockCard}}/>}
 
     <div style={S.legend}>{members.map(m=><Lg key={m.id} c={m.color} t={m.id==="me"?"나":m.name}/>)}<Lg c="var(--paper-2)" t="미점령" border/></div>
@@ -88,21 +106,43 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
 }
 
 export function RealMap({ownership,ownerColor,memberById,activeSgg}){
-  const [sel,setSel] = useState(null);
-  const selFeat = sel ? SIGUNGU.find(f=>f.code===sel) : null;
-  const selOwner = selFeat ? (selFeat.sido==="서울"?"me":ownership[selFeat.code]) : null;
+  const [sel,setSel] = useState(null);   // 선택된 게임판 코드
+  const selOwner = sel ? ownership[sel] : null;
+  /* 게임판 코드별로 폴리곤을 묶는다. 서울·수원처럼 합쳐진 곳은 여러 조각이 한 덩어리가 된다. */
+  const shapes = useMemo(()=>{
+    const g = {};
+    SIGUNGU.forEach(f=>{
+      const bc = boardCode(f.code);
+      const e = g[bc] || (g[bc] = { code:bc, sido:f.sido, name:f.name, parts:[] });
+      e.parts.push(f.d);
+    });
+    /* 이름은 게임판 타일 기준으로 맞춘다. 서울 강동구가 아니라 서울로 보여야 한다 */
+    BOARD.forEach(t=>{ if(g[t.code]){ g[t.code].sido = t.sido; g[t.code].name = t.name; } });
+    return Object.values(g).map(e=>({ ...e, d: outlineOf(e.parts) }));
+  },[]);
+  const selGroup = sel ? shapes.find(g=>g.code===sel) : null;
   return (
     <div style={S.mapCard}>
       <svg viewBox="-8 -8 636 674" style={{width:"100%",height:"auto",display:"block"}}>
-        {SIGUNGU.map(f=>{
-          const owner = f.sido==="서울" ? "me" : ownership[f.code];
+        {/* 1단계 — 면만 칠한다. 선이 없으니 합쳐진 지역 안쪽에 구 경계가 보이지 않는다 */}
+        {shapes.map(g=>{
+          const owner = ownership[g.code];
           const fill = owner ? ownerColor(owner) : "#FFFFFF";
-          const active = f.code===activeSgg;
-          return <path key={f.code} className={active?"mapBlink":""} d={f.d} fill={fill} stroke={sel===f.code?"#16223F":active?"#F2913C":"rgba(70,70,90,.35)"} strokeWidth={sel===f.code?1.6:active?1.6:0.4} onClick={()=>setSel(f.code)} style={{cursor:"pointer"}}/>;
+          const active = boardCode(activeSgg||"")===g.code;
+          return <path key={g.code} className={active?"mapBlink":""} d={g.d} fill={fill}
+                       stroke={fill} strokeWidth={0.6} onClick={()=>setSel(g.code)} style={{cursor:"pointer"}}/>;
+        })}
+        {/* 2단계 — 경계선. 합쳐진 지역은 조각마다 선을 그리지 않고 덩어리 테두리만 남긴다 */}
+        {shapes.map(g=>{
+          const active = boardCode(activeSgg||"")===g.code;
+          const on = sel===g.code;
+          return <path key={"o"+g.code} d={g.d} fill="none" pointerEvents="none"
+                       stroke={on?"#16223F":active?"#F2913C":"rgba(70,70,90,.35)"}
+                       strokeWidth={on||active?1.6:0.4}/>;
         })}
       </svg>
-      {selFeat && (<div style={S.selBar}><b style={{color:"var(--ink)"}}>{selFeat.sido} {selFeat.name}</b>
-        <span style={{marginLeft:8,fontSize:12.5,color:"var(--ink-soft)"}}>{selOwner==="me"?(selFeat.sido==="서울"?"홈 · 나의 영토":"나의 영토"):selOwner?`${memberById(selOwner)?.name}님의 영토`:"미점령"}</span>
+      {selGroup && (<div style={S.selBar}><b style={{color:"var(--ink)"}}>{selGroup.sido===selGroup.name ? selGroup.name : `${selGroup.sido} ${selGroup.name}`}</b>
+        <span style={{marginLeft:8,fontSize:12.5,color:"var(--ink-soft)"}}>{selOwner==="me"?"나의 영토":selOwner?`${memberById(selOwner)?.name}님의 영토`:"미점령"}</span>
         {selOwner && selOwner!=="me" && <span style={{marginLeft:"auto",fontSize:11.5,color:"var(--stamp)",fontWeight:700}}>통행료 {TOLL}🪙</span>}</div>)}
       <p style={{fontSize:11,color:"var(--ink-soft)",textAlign:"center",margin:"2px 0 2px"}}>인증한 시·군·구가 내 색으로 칠해져요 · 지역을 탭해보세요</p>
     </div>
