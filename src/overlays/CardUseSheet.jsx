@@ -112,7 +112,6 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
   ) : (
     <div style={S.modalScrim} onClick={closeAll}>
       <div style={S.sheet} onClick={e=>e.stopPropagation()} className="sheet-in">
-        <div style={S.sheetGrab}/>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <span style={{fontSize:26}}>{card.icon}</span>
           <div>

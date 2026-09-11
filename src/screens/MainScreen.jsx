@@ -20,10 +20,6 @@ export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDu
       <p style={{fontSize:13,color:"var(--ink-soft)"}}>오늘의 출발지</p>
       <p style={{fontFamily:"'HiKR',sans-serif",fontSize:22,color:"var(--ink)"}}>📍 {origin.label}</p>
       {origin.sub && <p style={{fontSize:12,color:"var(--ink-soft)",fontWeight:600,marginTop:2}}>{origin.sub}</p>}
-      <div style={S.apiPill}>
-        <span style={{width:7,height:7,borderRadius:"50%",flexShrink:0,background:apiStatus.mode==="live"?"#2EB872":apiStatus.mode==="sample"?"var(--gold)":"var(--line)"}}/>
-        <span>{apiStatus.mode==="live" ? "TourAPI 4.0 실시간 연결됨" : apiStatus.mode==="sample" ? ("샘플 데이터 사용 중 · "+(apiStatus.msg||"API 응답 없음")) : "TourAPI 4.0 대기 중 · 주사위를 굴리면 조회합니다"}</span>
-      </div>
     </div>
     {pending.length>0 && <div style={S.pendingRow}>{pending.map((p,i)=><span key={i} style={S.pendingTag}>{p.icon} {p.label}</span>)}</div>}
     {activeTrip ? (
