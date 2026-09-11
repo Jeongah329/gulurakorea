@@ -106,7 +106,7 @@ export function Splash({onStart}){
       </div>
       <div style={{padding:"0 26px 30px"}}>
         <button onClick={onStart} style={S.splashBtn}>여행 시작 🧳</button>
-        <p style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,.72)",marginTop:12}}>전국 땅따먹기</p>
+        <p style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,.72)",marginTop:12}}>한국관광콘텐츠랩 활용 공모전</p>
       </div>
     </div>
   );

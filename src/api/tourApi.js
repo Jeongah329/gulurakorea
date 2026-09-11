@@ -190,8 +190,8 @@ export async function fetchDestinations({ themes, distCap, origin }) {
 /* 확정된 목적지 1건만 상세 조회 — overview + 주변 맛집·체험으로 미션 3종 생성 */
 export async function enrichDestination(d) {
   if (!d || d.source !== "tourapi") return d;
-  const near = (ct, rows) => tourGet("locationBasedList2", {
-    mapX: String(d.lng), mapY: String(d.lat), radius: "2000",
+  const near = (ct, rows, radius = "2000") => tourGet("locationBasedList2", {
+    mapX: String(d.lng), mapY: String(d.lat), radius,
     contentTypeId: ct, numOfRows: rows, pageNo: "1", arrange: "E",
   }).catch(() => []);
   const r = await Promise.all([
@@ -225,7 +225,10 @@ export async function enrichDestination(d) {
       .sort((a, b) => (a.distM ?? 1e9) - (b.distM ?? 1e9))
       .slice(0, 8);
   };
-  const foods = toPlaces(r[1]), plays = toPlaces(r[2]);
+  let foods = toPlaces(r[1]), plays = toPlaces(r[2]);
+  /* 2km 안에 등록된 곳이 없으면(지방·외곽) 5km까지 한 번 더 찾아본다 */
+  if (!foods.length) foods = toPlaces(await near("39", "30", "5000"));
+  if (!plays.length) plays = toPlaces(await near("12", "30", "5000"));
 
   let ov = stripTags(c.overview);
   if (ov.length > 190) ov = ov.slice(0, 188) + "…";

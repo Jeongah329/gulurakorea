@@ -165,22 +165,20 @@ export function loadKakaoShare() {
 
 /* 초대 링크: 현재 배포 주소 + ?join=코드 */
 export function inviteLink(code) {
-  /* 기준 주소는 config.siteUrl 로 고정한다.
-     예전에는 현재 페이지 주소로 만들었는데, 미리보기 파일(file://)이나
-     로컬 개발 서버에서 공유하면 친구가 못 여는 링크가 만들어졌다. */
-  let base = CFG.siteUrl;
-  if (typeof window !== "undefined" && window.location && /^https?:$/.test(window.location.protocol)) {
-    base = window.location.origin + window.location.pathname;
-  }
+  /* 항상 config.siteUrl 기준으로 만든다.
+     현재 페이지 주소를 쓰면 미리보기 파일이나 예전에 만들어진 임시 Netlify 주소에서
+     공유했을 때 친구가 못 여는 링크가 만들어진다. */
+  const base = String(CFG.siteUrl || "").replace(/\/+$/, "");
   try {
-    const u = new URL(base);
+    const u = new URL(base + "/");
     u.hash = ""; u.search = "";
     u.searchParams.set("join", code);
     return u.toString();
   } catch (e) {
-    return CFG.siteUrl + "?join=" + encodeURIComponent(code);
+    return base + "/?join=" + encodeURIComponent(code);
   }
 }
+
 
 /* 카카오톡 공유 카드에 들어갈 이미지.
    카카오 서버가 직접 받아가므로 반드시 공개된 절대 주소여야 한다. */
