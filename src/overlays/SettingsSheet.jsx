@@ -54,6 +54,14 @@ export function SettingsSheet({
     "기타",
   ];
 
+  /* 설정이 열려 있는 동안 뒤 화면 스크롤을 막는다 */
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const y = window.scrollY;
+    document.body.classList.add("modal-open");
+    return () => { document.body.classList.remove("modal-open"); window.scrollTo(0, y); };
+  }, []);
+
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.permissions) { setGeo("확인 불가"); return; }
     navigator.permissions.query({ name: "geolocation" })
@@ -132,7 +140,7 @@ React · Vite · Firebase Firestore · Netlify`,
   /* 문서 보기 */
   if (view === "doc" && doc) {
     return (
-      <div style={S.modalScrim} onClick={onClose}>
+      <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
         <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
           <div style={S.setHead}>
             <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
@@ -148,7 +156,7 @@ React · Vite · Firebase Firestore · Netlify`,
   /* 닉네임 변경 */
   if (view === "name") {
     return (
-      <div style={S.modalScrim} onClick={onClose}>
+      <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
         <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
           <div style={S.setHead}>
             <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
@@ -173,7 +181,7 @@ React · Vite · Firebase Firestore · Netlify`,
   if (view === "quit" && !confirm) {
     const ready = reason && (reason !== "기타" || reasonEtc.trim());
     return (
-      <div style={S.modalScrim} onClick={onClose}>
+      <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
         <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
           <div style={S.setHead}>
             <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
@@ -213,7 +221,7 @@ React · Vite · Firebase Firestore · Netlify`,
   if (confirm) {
     const isQuit = confirm === "quit";
     return (
-      <div style={S.modalScrim} onClick={() => setConfirm(null)}>
+      <div className="modal-scrim" style={S.modalScrim} onClick={() => setConfirm(null)}>
         <div style={{ ...S.sheet, maxWidth: 320, textAlign: "center", padding: "26px 22px 18px" }}
           onClick={e => e.stopPropagation()} className="sheet-in">
           <span style={S.setDangerIcon}>🗑</span>
@@ -236,7 +244,7 @@ React · Vite · Firebase Firestore · Netlify`,
 
   /* 메인 */
   return (
-    <div style={S.modalScrim} onClick={onClose}>
+    <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
       <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
         <div style={S.setHead}>
           <span style={{ minWidth: 52 }} />
@@ -245,7 +253,7 @@ React · Vite · Firebase Firestore · Netlify`,
         </div>
 
         <Group title="계정">
-          <Row label="닉네임" hint="방에서 친구에게 보이는 이름이에요"
+          <Row label="닉네임 바꾸기" hint="방에서 친구에게 보이는 이름이에요"
             right={myName || "미설정"} onClick={() => setView("name")} />
           <Row label="출발 지역 변경"
             hint={canChangeHome

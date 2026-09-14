@@ -28,7 +28,9 @@ button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 @keyframes flashk{0%{opacity:0;transform:scale(.55)}45%{opacity:.9;transform:scale(1.05)}100%{opacity:0;transform:scale(1.75)}}.flash{animation:flashk 1.8s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:.3s}
 @keyframes burstk{0%{opacity:0;transform:translate(-50%,0) scale(.2) rotate(0deg)}18%{opacity:1;transform:translate(calc(-50% + var(--tx)*.25),calc(var(--ty)*.25)) scale(1) rotate(40deg)}100%{opacity:0;transform:translate(calc(-50% + var(--tx)),var(--ty)) scale(.15) rotate(200deg)}}.burst{animation:burstk 1.6s cubic-bezier(.15,.6,.3,1) forwards}
 @keyframes ringk{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}25%{opacity:.55}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}}.magic-ring{animation:ringk 1.5s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:.32s}
-@keyframes sheetin{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}.sheet-in{animation:sheetin .3s cubic-bezier(.2,.9,.3,1)}
+@keyframes sheetin{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+body.modal-open{overflow:hidden!important}
+body.modal-open .app-shell,body.modal-open .app-body{overflow:hidden!important}.sheet-in{animation:sheetin .3s cubic-bezier(.2,.9,.3,1)}
 @keyframes toastin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}.toast-in{animation:toastin .25s ease}
 @keyframes mapblinkk{0%,100%{fill:#fff}50%{fill:#FCE2C2}}
 .mapBlink{animation:mapblinkk 1.1s ease-in-out infinite}
@@ -79,12 +81,15 @@ button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
   }
   .app-nav button{
     flex:0 0 auto!important;flex-direction:row!important;
-    align-items:center!important;gap:9px!important;
-    padding:16px 18px 14px;border-bottom:3px solid transparent;
+    align-items:center!important;gap:11px!important;
+    padding:18px 30px 16px;border-bottom:3px solid transparent;
   }
-  .app-nav button span:first-child{font-size:21px!important}
-  .app-nav button span:last-child{font-size:15px!important}
+  .app-nav button span:first-child{font-size:27px!important}
+  .app-nav button span:last-child{font-size:19px!important}
   .app-nav button:hover{background:rgba(22,34,63,.04)}
+
+  /* 설정 등 모달은 화면 기준으로 고정해 항상 가운데에 보이도록 */
+  .modal-scrim{position:fixed!important;inset:0!important}
 
   /* 시작 화면 — 버튼이 화면 폭만큼 늘어나지 않도록 */
   .app-splash{position:fixed!important}
