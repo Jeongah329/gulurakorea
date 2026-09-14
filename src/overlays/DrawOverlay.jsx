@@ -9,6 +9,22 @@ import { KakaoMap } from "../ui/KakaoMap.jsx";
 import { CARD_USE_MS, CardUseOverlay, DieFace, Envelope, Meta } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
+/* 목적지 설명 — 기본은 4줄까지, 길면 더보기로 전체를 편다 */
+function Overview({ text }){
+  const [open,setOpen] = useState(false);
+  const long = String(text||"").length > 150;
+  return (
+    <div>
+      <p style={{...S.overview, ...(long && !open ? S.overviewClamp : {})}}>{text}</p>
+      {long && (
+        <button onClick={()=>setOpen(v=>!v)} style={S.moreLink}>
+          {open ? "접기" : "더보기"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, themes, distIdx,
   duration, rollsLeft, rollDice, depart, destOwner, tollDue,
   memberById, resetToMain, startTrip, appliedBoosts=[],
@@ -76,7 +92,7 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
                     {tollDue ? (<div style={{...S.ownBanner,background:"rgba(242,145,60,.12)",border:"1px solid rgba(242,145,60,.5)"}}><span style={{fontSize:18}}>🚧</span><div style={{flex:1,textAlign:"left"}}><b style={{color:"var(--stamp)",fontSize:13}}>{memberById(destOwner)?.name}님의 영토</b><div style={{fontSize:12,color:"var(--ink-soft)"}}>통행료 {TOLL}코인 발생</div></div></div>)
                      : destOwner==="me" ? (<div style={{...S.ownBanner,background:"rgba(30,142,138,.10)",border:"1px solid rgba(30,142,138,.35)"}}><span style={{fontSize:18}}>🏠</span><span style={{fontSize:13,color:"var(--ink)",fontWeight:700}}>내 영토 재방문 · +50점</span></div>)
                      : (<div style={{...S.ownBanner,background:"rgba(227,169,44,.12)",border:"1px solid rgba(227,169,44,.45)"}}><span style={{fontSize:18}}>🚩</span><span style={{fontSize:13,color:"var(--ink)",fontWeight:700}}>미점령 지역 · 인증하면 {candidate.depop?200:100}점</span></div>)}
-                    <p style={S.overview}>{candidate.overview}</p>
+                    <Overview text={candidate.overview}/>
                     {isFinite(candidate.lat) && isFinite(candidate.lng) && (<div style={{marginTop:12}}>
                       <KakaoMap lat={candidate.lat} lng={candidate.lng} title={candidate.title} height={150} level={5}/>
                       <a href={kakaoRouteUrl(candidate)} target="_blank" rel="noreferrer" style={S.routeBtn}>🚗 카카오맵으로 길찾기</a>

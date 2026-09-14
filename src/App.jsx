@@ -14,6 +14,7 @@ import { SAMPLE_POOL } from "./data/sampleDestinations.js";
 import { SIGUNGU, boardCode, sggFromAddr } from "./lib/sigungu.js";
 import { BOARD } from "./data/board.js";
 import { CardUseSheet } from "./overlays/CardUseSheet.jsx";
+import { SettingsSheet } from "./overlays/SettingsSheet.jsx";
 import { DrawOverlay } from "./overlays/DrawOverlay.jsx";
 import { ResultOverlay } from "./overlays/ResultOverlay.jsx";
 import { ShareModal } from "./overlays/ShareModal.jsx";
@@ -33,6 +34,8 @@ export default function App(){
   const [ownership,setOwnership] = useState({}); // 게임판 코드 -> memberId
   const [homeSet,setHomeSet] = useState(false);   // 출발 지역을 정했는지
   const [homeCand,setHomeCand] = useState(null);  // 현재 위치로 찾은 출발 지역 후보
+  const [homeCode,setHomeCode] = useState(null);  // 출발 지역으로 받은 게임판 코드
+  const [settingsOpen,setSettingsOpen] = useState(false);
   const [pendingJoinCode,setPendingJoinCode] = useState("");
   const [myId] = useState(()=>getMyId());
   const [myName,setMyNameState] = useState(()=>getMyName());
@@ -416,10 +419,29 @@ export default function App(){
     if(!place || homeSet) return;
     setOwnership(o=> o[place.code] ? o : ({...o,[place.code]:"me"}));
     if(room?.code) syncOwnership(room.code, myId, place.code);
-    setHomeSet(true);
+    setHomeSet(true); setHomeCode(place.code);
     flash(`${place.name} · 출발 지역으로 등록했어요`);
   }
   function updateMyName(n){ setMyNameState(n); persistMyName(n); }
+
+  /* 출발 지역 다시 정하기 — 기존에 받은 한 칸을 반납하고 지도 탭에서 새로 고르게 한다 */
+  function changeHome(){
+    if(room?.code){ flash("방에 참여 중일 때는 바꿀 수 없어요"); return; }
+    setOwnership(o=>{ const n={...o}; if(homeCode && n[homeCode]==="me") delete n[homeCode]; return n; });
+    setHomeCode(null); setHomeSet(false); setSettingsOpen(false); setTab("map");
+    flash("지도 탭에서 출발 지역을 다시 골라 주세요");
+  }
+
+  /* 탈퇴 — 브라우저에 남은 기록과 참여 중인 방의 내 기록을 지운다 */
+  function deleteAll(reason){
+    if(reason) { try{ console.info("[탈퇴 사유]", reason); }catch(e){} }
+    try{
+      if(room?.code) leaveRoomOnline(room.code, myId);
+      window.localStorage.removeItem("gulura_player_id");
+      window.localStorage.removeItem("gulura_player_name");
+    }catch(e){}
+    setTimeout(()=>{ try{ window.location.replace(String(window.location.origin)+"/"); }catch(e){ window.location.reload(); } }, 150);
+  }
 
   function leaveRoom(){ if(room?.code) leaveRoomOnline(room.code, myId); setMembers([ME]); setRoom(null); setRoomCards([]); setThroneRegion(null); setOwnership(o=>{ const n={}; Object.entries(o).forEach(([k,v])=>{ if(v==="me") n[k]=v; }); return n; }); flash("방에서 나왔어요"); }
   function resetDemo(){
@@ -436,7 +458,10 @@ export default function App(){
         {!started ? <Splash onStart={()=>setStarted(true)}/> : (<>
         <header className="app-bar" style={S.appbar}>
           <div style={{display:"flex",alignItems:"center",gap:8}}><DiceLogo/><span style={S.wordmark}>대한민국 부루마블</span></div>
-          <div style={S.coinPill}>🪙 {coins}</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={S.coinPill}>🪙 {coins}</div>
+            <button onClick={()=>setSettingsOpen(true)} aria-label="설정" style={S.gearBtn}>⚙️</button>
+          </div>
         </header>
         <main style={S.body} className="app-body scroll">
           {tab==="main" && <MainScreen {...{themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify:()=>setVerifyOpen(true),finishTrip,origin,apiStatus,
@@ -466,6 +491,13 @@ export default function App(){
           hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
         {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} flash={flash}/>)}
+        {settingsOpen && (<SettingsSheet
+          onClose={()=>setSettingsOpen(false)}
+          myName={myName} onNameChange={updateMyName}
+          room={room} leaveRoom={leaveRoom}
+          homeLabel={homeCode ? (BOARD.find(b=>b.code===homeCode)?.name || "설정됨") : null}
+          canChangeHome={!room} onChangeHome={changeHome}
+          resetDemo={resetDemo} onDeleteAll={deleteAll} flash={flash}/>)}
         {cardSheet && (<CardUseSheet card={cardSheet.card} kind={cardSheet.kind} onClose={closeCard}
           phase={phase} candidate={candidate} activeTrip={activeTrip} ownedRegions={ownedProtectableRegions()}
           goToMain={()=>setTab("main")}

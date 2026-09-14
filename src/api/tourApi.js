@@ -5,7 +5,7 @@ import CFG from "../config.js";
 import { DEPOP_SET } from "../data/depopulated.js";
 import { SAMPLE_POOL } from "../data/sampleDestinations.js";
 import { haversineKm } from "../lib/geo.js";
-import { DOKDO_CODE, sggFromAddr, shortSgg } from "../lib/sigungu.js";
+import { DOKDO_CODE, boardCode, sggFromAddr, shortSgg } from "../lib/sigungu.js";
 import { stripTags } from "../lib/text.js";
 
 /* ═══════════════════════════════════════════════════════════
@@ -206,11 +206,20 @@ export async function enrichDestination(d) {
   ]);
   const c = r[0][0] || {};
 
+  /* 목적지가 속한 게임판 칸. 미션 후보는 반드시 이 안에 있어야 한다.
+     반경을 넓혀 찾다가 옆 시·군의 장소가 섞여 들어오는 것을 막는다. */
+  const destTile = boardCode(d.sgg);
+  const sameTile = (addr) => {
+    const hit = sggFromAddr(addr, d.sido);
+    return !!hit && boardCode(hit.code) === destTile;
+  };
+
   /* 주변 목록 → 사용자가 고를 수 있는 후보 리스트로 정리 (가까운 순, 최대 8곳) */
   const toPlaces = (arr) => {
     const seen = new Set();
     return (arr || [])
       .filter(x => x && x.title && String(x.contentid) !== d.contentid)
+      .filter(x => sameTile(x.addr1))
       .map(x => {
         const name = stripTags(x.title);
         const m = parseFloat(x.dist);
@@ -231,12 +240,15 @@ export async function enrichDestination(d) {
       .slice(0, 8);
   };
   let foods = toPlaces(r[1]), plays = toPlaces(r[2]);
-  /* 2km 안에 등록된 곳이 없으면(지방·외곽) 5km까지 한 번 더 찾아본다 */
+  /* 2km 안에 등록된 곳이 없으면 5km, 그래도 없으면 10km까지 넓혀 본다.
+     끝내 없으면 그 미션은 아예 만들지 않는다 — 존재하지 않는 장소를 미션으로 내지 않기 위해서다. */
   if (!foods.length) foods = toPlaces(await near("39", "30", "5000"));
+  if (!foods.length) foods = toPlaces(await near("39", "30", "10000"));
   if (!plays.length) plays = toPlaces(await near("12", "30", "5000"));
+  if (!plays.length) plays = toPlaces(await near("12", "30", "10000"));
 
-  let ov = stripTags(c.overview);
-  if (ov.length > 190) ov = ov.slice(0, 188) + "…";
+  /* 설명은 자르지 않고 전문을 넘긴다. 화면에서 접었다 펴는 방식으로 보여준다. */
+  const ov = stripTags(c.overview);
   return Object.assign({}, d, {
     overview: ov || (d.addr ? d.addr + " · 한국관광공사 관광정보 등록지" : d.sido + " " + d.sigungu + "의 관광지입니다."),
     image: d.image || c.firstimage || "",
@@ -245,10 +257,8 @@ export async function enrichDestination(d) {
       { n: "독도 도착 인증", t: "명소" },
     ] : [
       { n: d.title + " 도착 인증", t: "명소" },
-      { n: foods[0] ? foods[0].name + " 맛보기" : d.sigungu + " 로컬 맛집", t: "맛집",
-        place: foods[0] || null },
-      { n: plays[0] ? plays[0].name + " 둘러보기" : d.sigungu + " 골목 산책", t: "체험",
-        place: plays[0] || null },
+      ...(foods[0] ? [{ n: foods[0].name + " 맛보기", t: "맛집", place: foods[0] }] : []),
+      ...(plays[0] ? [{ n: plays[0].name + " 둘러보기", t: "체험", place: plays[0] }] : []),
     ],
   });
 }

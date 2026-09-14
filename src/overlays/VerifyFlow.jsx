@@ -120,7 +120,9 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
           <p style={{fontFamily:"'HiKR',sans-serif",fontSize:15,color:"var(--ink)"}}>추가 미션 <span style={{fontSize:12,fontFamily:"'MiceGothic',sans-serif",color:"var(--ink-soft)",fontWeight:600}}>· 인증당 +20점</span></p>
           <p style={{fontSize:12.5,color:"var(--ink-soft)",margin:"4px 0 14px"}}>
             {others.length===0
-              ? "이곳은 도착 인증만으로 점령할 수 있어요. 메인에서 점령하기를 눌러주세요."
+              ? (trip.dokdo
+                  ? "이곳은 도착 인증만으로 점령할 수 있어요. 메인에서 점령하기를 눌러주세요."
+                  : `${trip.sigungu} 안에 등록된 맛집·체험 장소가 없어요. 도착 인증만으로 점령할 수 있습니다.`)
               : "맛집은 영수증, 체험은 위치로 인증해요. 모두 인증하면 메인에서 점령할 수 있어요."}
           </p>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -139,7 +141,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
               {/* 주변 후보 고르기 — TourAPI 주변 목록에서 직접 선택 */}
               {!m.done && (pool(m.t).length>0) && (
                 <button onClick={()=>setPickerIdx(pickerIdx===m.i?-1:m.i)} style={S.swapBtn}>
-                  {pickerIdx===m.i ? "닫기" : `다른 곳 고르기 · 주변 ${pool(m.t).length}곳`}
+                  {pickerIdx===m.i ? "닫기" : `다른 곳 고르기 · ${trip.sigungu} ${pool(m.t).length}곳`}
                 </button>)}
               {!m.done && pickerIdx===m.i && (
                 <div style={S.placeList} className="pop-in">
