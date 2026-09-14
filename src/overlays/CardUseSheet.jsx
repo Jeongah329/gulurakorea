@@ -39,33 +39,45 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
     </>);
   } else {
     switch(card.id){
-      case "reroll":
-      case "pass": {
-        const usable = !!candidate && (phase==="sealed"||phase==="revealed");
+      case "reroll": {
+        const usable = !!candidate && phase==="revealed";
         body = usable ? (<>
           <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-          <button style={S.roomPrimary} onClick={()=>playUse(card.id==="reroll"?actions.reroll:actions.pass, "카드를 사용했어요")}>지금 사용하기</button>
+          <button style={S.roomPrimary} onClick={()=>playUse(actions.reroll, "카드를 사용했어요")}>지금 사용하기</button>
         </>) : (<>
-          <p style={S.sheetWarn}>주사위를 굴린 뒤, 봉투 단계에서 사용할 수 있어요.</p>
-          <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMain(); }}>메인 탭에서 주사위 굴리기</button>
+          <p style={S.sheetWarn}>봉투를 연 뒤, 목적지가 공개된 화면에서 사용할 수 있어요.</p>
+          <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMain(); }}>메인 탭으로 가기</button>
         </>);
+        break;
+      }
+      case "pass": {
+        const started = activeTrip && activeTrip.missions.some(m=>m.done);
+        const usable = !!activeTrip && !started;
+        body = usable ? (<>
+          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
+          <button style={S.roomPrimary} onClick={()=>playUse(actions.pass, "이번 여행을 포기했어요")}>지금 사용하기</button>
+        </>) : (
+          <p style={S.sheetWarn}>
+            {started ? "이미 인증을 시작한 여행은 포기할 수 없어요."
+                     : "출발한 여행이 있을 때 사용할 수 있어요."}
+          </p>
+        );
         break;
       }
       case "preview":
       case "select": {
-        const usable = phase==="main";
+        const usable = phase==="main" || phase==="sealed";
         body = usable ? (<>
           <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
           <button style={S.roomPrimary} onClick={()=>playUseAndClose(card.id==="preview"?actions.preview:actions.select)}>지금 사용하기</button>
         </>) : (
-          <p style={S.sheetWarn}>주사위가 진행 중일 때는 사용할 수 없어요. 진행 중인 뽑기를 마무리한 뒤 다시 시도해 주세요.</p>
+          <p style={S.sheetWarn}>봉투를 열기 전까지만 사용할 수 있어요. 진행 중인 뽑기를 마무리한 뒤 다시 시도해 주세요.</p>
         );
         break;
       }
-      case "ignore_dist":
       case "adjacent":
       case "bonus": {
-        const fn = card.id==="ignore_dist" ? actions.ignore_dist : card.id==="adjacent" ? actions.adjacent : actions.bonus;
+        const fn = card.id==="adjacent" ? actions.adjacent : actions.bonus;
         body = (<>
           <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
           <button style={S.roomPrimary} onClick={()=>playUse(fn, "다음 주사위/점령에 적용돼요")}>지금 사용하기</button>

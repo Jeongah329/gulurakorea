@@ -2,14 +2,14 @@
  * 마이 탭 — 기록과 카드
  */
 import React, { useState } from "react";
-import { PERSONAL_CARD_WHEN_LABEL } from "../data/constants.js";
+import { CARD_DROP_RATE, PERSONAL_CARD_WHEN_LABEL } from "../data/constants.js";
 import { Section, Stat } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 const COLL_ICON = { "영수증":"🧾", "인증샷":"📷", "면제":"🧳" };
 
 /* ───────── 마이페이지 ───────── */
-export function MyScreen({score,coins,inventory,roomCards=[],ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostIgnoreDist,boostAdjacent}){
+export function MyScreen({score,coins,inventory,roomCards=[],ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostAdjacent,activeTrip}){
   const [showAllCards,setShowAllCards] = useState(false);
   const shownCards = showAllCards ? cards : cards.slice(0,3);
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -32,9 +32,12 @@ export function MyScreen({score,coins,inventory,roomCards=[],ownedCount,trips,ca
           </div>))}</div>}
     </div>
     <Section title="개인 카드" sub={`${inventory.length}장`}>
-      {(bonusActive || rushCharges>0 || boostIgnoreDist || boostAdjacent) && (
+      <p style={S.dropRateNote}>
+        주사위를 굴릴 때마다 {Math.round(CARD_DROP_RATE.personal*100)}% 확률로 개인 카드 1장을 얻어요
+        {room ? `, 방에 있으면 여기서 다시 ${Math.round(CARD_DROP_RATE.room*100)}% 확률로 방 카드 1장을 더 받아요` : ""}.
+      </p>
+      {(bonusActive || rushCharges>0 || boostAdjacent) && (
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-          {boostIgnoreDist && <span style={S.cardTag}>📍 다음 주사위 거리 무시 예약됨</span>}
           {boostAdjacent && <span style={S.cardTag}>🧭 다음 주사위 인접 지역 예약됨</span>}
           {bonusActive && <span style={S.cardTag}>⭐ 다음 점령 보너스 적용 예정</span>}
           {rushCharges>0 && <span style={S.cardTag}>🔥 여행 러시 {rushCharges}회 대기 중</span>}

@@ -102,6 +102,7 @@ export const S = {
   cardHintBtn:{flexShrink:0,background:"var(--paper-2)",color:"var(--ink-soft)",border:"1px dashed var(--line)",borderRadius:10,padding:"8px 12px",fontSize:11,fontWeight:700,cursor:"pointer",textAlign:"center"},
   cardPill:{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:10,padding:"7px 11px",fontSize:11.5,fontWeight:800,color:"var(--paper)",cursor:"pointer"},
   cardRow:{display:"flex",alignItems:"center",gap:11,background:"var(--paper)",border:"1.5px solid var(--line)",borderRadius:12,padding:"11px 12px"},
+  dropRateNote:{fontSize:11.5,color:"var(--ink-soft)",lineHeight:1.6,margin:"0 0 10px",padding:"8px 11px",background:"var(--paper-2)",borderRadius:9},
   cardTag:{fontSize:10,fontWeight:800,color:"var(--ink-soft)",background:"var(--paper-2)",padding:"2px 7px",borderRadius:7,whiteSpace:"nowrap"},
   choiceCard:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,width:"100%",border:"none",borderRadius:14,padding:"14px 16px",cursor:"pointer",boxShadow:"0 4px 14px rgba(0,0,0,.25)"},
   pendingRow:{display:"flex",gap:6,flexWrap:"wrap"},

@@ -28,7 +28,7 @@ function Overview({ text }){
 export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, themes, distIdx,
   duration, rollsLeft, rollDice, depart, destOwner, tollDue,
   memberById, resetToMain, startTrip, appliedBoosts=[],
-  hasReroll, hasPass, useRerollCard, useTravelPassCard,
+  hasReroll, useRerollCard, hasPreview, hasSelect, usePreviewCard, useSelectCard,
   choices, chooseMode, chooseCandidate, cancelChoosing }){
   const [fx,setFx] = useState(null); // {icon,label,fn} — 🔄/🎫 카드 사용 연출 재생 중
   const timerRef = useRef(null);
@@ -38,10 +38,17 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
     setFx({ icon, label });
     timerRef.current = setTimeout(()=>{ fn(); setFx(null); }, CARD_USE_MS);
   }
-  const cardButtons = (hasReroll || hasPass) && (
+  /* 봉투를 연 뒤 — 배정된 지역을 다시 뽑는 카드만 쓸 수 있다 */
+  const cardButtons = hasReroll && (
     <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
-      {hasReroll && <button disabled={!!fx} onClick={()=>playCard("🔄","지역을 다시 배정하는 중…",useRerollCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🔄 지역 변경권 사용</button>}
-      {hasPass && <button disabled={!!fx} onClick={()=>playCard("🎫","이번 지역을 포기하는 중…",useTravelPassCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🎫 여행 패스 사용</button>}
+      <button disabled={!!fx} onClick={()=>playCard("🔄","지역을 다시 배정하는 중…",useRerollCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🔄 지역 변경권 사용</button>
+    </div>
+  );
+  /* 봉투를 열기 전 — 후보를 고르는 카드는 이 단계에서만 쓸 수 있다 */
+  const preOpenCards = (hasPreview || hasSelect) && (
+    <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
+      {hasPreview && <button disabled={!!fx} onClick={()=>playCard("🔍","후보 3곳을 찾는 중…",usePreviewCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🔍 미리 보기 사용</button>}
+      {hasSelect && <button disabled={!!fx} onClick={()=>playCard("🗺️","고를 수 있는 지역을 찾는 중…",useSelectCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🗺️ 지역 선택권 사용</button>}
     </div>
   );
   const appliedRow = appliedBoosts.length>0 && (
@@ -77,7 +84,7 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
                 <div style={{display:"flex",gap:10,marginTop:18,width:"100%"}}>
                   <button onClick={rollDice} disabled={rollsLeft<=0} style={{...S.btnGhost,opacity:rollsLeft<=0?.4:1}}>다시 굴리기 · {rollsLeft}회</button>
                   <button onClick={depart} style={S.btnDepart}>출발 ✦ 봉투 열기</button></div>
-                {cardButtons}
+                {preOpenCards}
                 <p style={S.olSub}>출발하면 목적지가 확정돼요</p></div>)}
             {phase==="opening" && candidate && (<div style={{textAlign:"center",width:"100%"}}><Envelope opening={true} themes={[]} dist="" dur="" relaxed={false}/><p style={{color:"var(--paper)",opacity:.85,marginTop:22,fontSize:14}}>봉인을 여는 중…</p></div>)}
             {phase==="revealed" && candidate && (
