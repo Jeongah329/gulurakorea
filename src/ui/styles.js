@@ -110,6 +110,13 @@ export const S = {
   sheetOption:{textAlign:"left",width:"100%",padding:"12px 13px",borderRadius:12,border:"1.5px solid var(--line)",background:"var(--paper)",color:"var(--ink)",fontSize:13.5,fontWeight:700,cursor:"pointer"},
   sheetWarn:{fontSize:12.5,color:"var(--ink-soft)",lineHeight:1.6,background:"var(--paper-2)",border:"1px dashed var(--line)",borderRadius:12,padding:"12px 13px",marginBottom:4},
   throneNote:{display:"flex",alignItems:"center",gap:8,background:"rgba(227,169,44,.14)",border:"1px solid rgba(227,169,44,.5)",borderRadius:12,padding:"9px 12px",fontSize:12,color:"var(--ink)",fontWeight:700},
+  profileEdit:{marginLeft:"auto",background:"var(--paper)",border:"1.5px solid var(--line)",borderRadius:"50%",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,cursor:"pointer",padding:0,flexShrink:0},
+  copyFallback:{padding:"11px 14px 13px",borderTop:"1px solid rgba(22,34,63,.07)"},
+  shopCoin:{display:"flex",alignItems:"center",background:"var(--paper-2)",borderRadius:14,padding:"13px 16px",marginBottom:10},
+  shopRow:{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"11px 13px",borderRadius:14,border:"1.5px solid var(--line)",background:"var(--paper)",cursor:"pointer"},
+  shopPrice:{fontFamily:"'HiKR',sans-serif",fontSize:14,color:"var(--ink)",background:"var(--paper-2)",borderRadius:20,padding:"5px 11px",flexShrink:0},
+  shopPriceRow:{display:"flex",alignItems:"center",background:"var(--paper-2)",borderRadius:14,padding:"11px 14px"},
+  shopBtn:{background:"var(--stamp)",border:"none",borderRadius:"50%",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",padding:0,flexShrink:0},
   setHead:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16},
   setBack:{background:"transparent",border:"none",fontSize:12.5,fontWeight:700,color:"var(--ink-soft)",cursor:"pointer",padding:"4px 6px",minWidth:52,whiteSpace:"nowrap",flexShrink:0,textAlign:"center"},
   setGroupTitle:{fontSize:11.5,fontWeight:800,color:"var(--ink-soft)",margin:"0 0 7px 3px",letterSpacing:.2},
@@ -194,7 +201,7 @@ export const S = {
   apiInput:{width:"100%",boxSizing:"border-box",padding:"10px 12px",borderRadius:10,border:"1.5px solid var(--line)",background:"var(--paper)",color:"var(--ink)",fontSize:12,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace"},
   apiBtn:{padding:"11px",borderRadius:12,border:"none",background:"var(--ink)",color:"var(--paper)",fontSize:13,fontWeight:800,cursor:"pointer"},
   reset:{background:"none",border:"1.5px solid var(--line)",borderRadius:12,padding:"12px",color:"var(--ink-soft)",fontSize:13,fontWeight:700,cursor:"pointer"},
-  toast:{position:"absolute",bottom:84,left:"50%",transform:"translateX(-50%)",background:"var(--ink)",color:"var(--paper)",fontSize:13,fontWeight:700,padding:"11px 18px",borderRadius:24,boxShadow:"0 8px 24px rgba(0,0,0,.3)",zIndex:60,whiteSpace:"nowrap"},
+  toast:{position:"fixed",bottom:84,left:"50%",transform:"translateX(-50%)",background:"var(--ink)",color:"var(--paper)",fontSize:13,fontWeight:700,padding:"11px 18px",borderRadius:24,boxShadow:"0 8px 24px rgba(0,0,0,.35)",zIndex:200,whiteSpace:"nowrap",maxWidth:"calc(100% - 36px)",overflow:"hidden",textOverflow:"ellipsis"},
 };
 
 export { CSS } from "./css.js";

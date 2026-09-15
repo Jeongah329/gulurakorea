@@ -141,10 +141,6 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg,protectedRegi
           return <path key={g.code} className={active?"mapBlink":""} d={g.d} fill={fill}
                        stroke={fill} strokeWidth={0.6} onClick={()=>setSel(g.code)} style={{cursor:"pointer"}}/>;
         })}
-        {/* 독도는 도형이 작아 이름표를 함께 표시한다 */}
-        <text x="643" y="158" textAnchor="middle" fontSize="11" fontWeight="700"
-              fill={ownership[DOKDO_CODE] ? ownerColor(ownership[DOKDO_CODE]) : "rgba(70,70,90,.6)"}
-              pointerEvents="none">독도</text>
         {/* 2단계 — 경계선. 합쳐진 지역은 조각마다 선을 그리지 않고 덩어리 테두리만 남긴다 */}
         {shapes.map(g=>{
           const active = boardCode(activeSgg||"")===g.code;

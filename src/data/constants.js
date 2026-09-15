@@ -47,6 +47,12 @@ export const ROOM_CARDS = [
   { id:"rush",         name:"여행 러시",       icon:"🔥", desc:"일정 시간 방 전체 보너스" },
 ];
 
+/* 카드 상점 가격 — 코인으로 구매합니다. 효과가 강할수록 비쌉니다. */
+export const CARD_PRICE = {
+  reroll: 80, preview: 120, select: 200, pass: 100,
+  mission_exempt: 150, protect: 250, bonus: 180, adjacent: 120,
+};
+
 /* 카드 획득 확률 — 화면에도 그대로 표시합니다 */
 export const CARD_DROP_RATE = { personal: 0.35, room: 0.18 };
 

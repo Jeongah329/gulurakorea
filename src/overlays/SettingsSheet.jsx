@@ -35,12 +35,13 @@ function Row({ label, hint, right, onClick, danger }) {
 export function SettingsSheet({
   onClose, myName, onNameChange, avatar, onAvatarChange, room, leaveRoom,
   homeLabel, canChangeHome, onChangeHome,
-  resetDemo, onDeleteAll, flash,
+  resetDemo, onDeleteAll, flash, initialView,
 }) {
-  const [view, setView] = useState("main");   // main | name | doc
+  const [view, setView] = useState(initialView || "main");   // main | account | name | doc | quit
   const [doc, setDoc] = useState(null);
   const [name, setName] = useState(myName || "");
   const [confirm, setConfirm] = useState(null); // 'reset' | 'quit'
+  const [copyFail, setCopyFail] = useState(false);   // 복사가 막힌 환경에서 직접 고르도록
   const [reason, setReason] = useState("");     // 탈퇴 사유
   const [reasonEtc, setReasonEtc] = useState("");
   const [geo, setGeo] = useState("확인 중");
@@ -89,10 +90,30 @@ export function SettingsSheet({
       .catch(() => setGeo("확인 불가"));
   }, []);
 
-  function copyLink() {
-    const url = String(CFG.siteUrl || "").replace(/\/+$/, "") + "/";
-    try { navigator.clipboard.writeText(url); flash("링크를 복사했어요"); }
-    catch (e) { flash("복사에 실패했어요 · " + url); }
+  const SHARE_URL = String(CFG.siteUrl || "").replace(/\/+$/, "") + "/";
+
+  /* 클립보드 복사 — 최신 API가 막힌 환경(비보안 접속 등)에서는 예전 방식으로 넘어간다 */
+  async function copyLink() {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(SHARE_URL);
+        setCopyFail(false);
+        flash("링크를 클립보드에 복사했어요");
+        return;
+      }
+      const ta = document.createElement("textarea");
+      ta.value = SHARE_URL;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (ok) { setCopyFail(false); flash("링크를 클립보드에 복사했어요"); }
+      else { setCopyFail(true); flash("복사가 막혀 있어요 · 주소를 길게 눌러 복사해 주세요"); }
+    } catch (e) {
+      setCopyFail(true);
+      flash("복사가 막혀 있어요 · 주소를 길게 눌러 복사해 주세요");
+    }
   }
 
   function openContact() {
@@ -180,7 +201,7 @@ React · Vite · Firebase Firestore · Netlify`,
       <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
         <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
           <div style={S.setHead}>
-            <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
+            <button onClick={() => setView(initialView === "account" ? "account" : "main")} style={S.setBack}>‹ 뒤로</button>
             <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>닉네임 바꾸기</b>
             <span style={{ minWidth: 52 }} />
           </div>
@@ -190,7 +211,7 @@ React · Vite · Firebase Firestore · Netlify`,
           <button
             onClick={() => {
               if (!name.trim()) { flash("닉네임을 입력해 주세요"); return; }
-              onNameChange(name.trim()); flash("닉네임을 바꿨어요"); setView("main");
+              onNameChange(name.trim()); flash("닉네임을 바꿨어요"); setView(initialView === "account" ? "account" : "main");
             }}
             style={{ ...S.roomPrimary, width: "100%" }}>저장</button>
         </div>
@@ -263,6 +284,37 @@ React · Vite · Firebase Firestore · Netlify`,
     );
   }
 
+  /* 계정 — 프로필 연필에서 바로 들어오는 화면 */
+  if (view === "account") {
+    return (
+      <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
+        <input ref={fileRef} type="file" accept="image/*" onChange={pickAvatar} style={{ display: "none" }} />
+        <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
+          <div style={S.setHead}>
+            <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
+            <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>프로필 수정</b>
+            <button onClick={onClose} style={S.setBack}>닫기</button>
+          </div>
+          <Group title="계정">
+            <Row label="프로필 사진" hint="정사각형으로 잘라 브라우저에만 저장돼요"
+              right={<span style={{ ...S.avatarSm, ...(avatar ? { background: `url(${avatar}) center/cover no-repeat` } : {}) }}>{avatar ? "" : "👤"}</span>}
+              onClick={() => fileRef.current && fileRef.current.click()} />
+            {avatar && <Row label="프로필 사진 지우기" hint="기본 아이콘으로 돌아가요"
+              onClick={() => { onAvatarChange(""); flash("기본 아이콘으로 바꿨어요"); }} />}
+            <Row label="닉네임 바꾸기" hint="방에서 친구에게 보이는 이름이에요"
+              right={myName || "미설정"} onClick={() => setView("name")} />
+            <Row label="출발 지역 변경"
+              hint={canChangeHome
+                ? "처음에 받은 지역을 다시 정할 수 있어요"
+                : "방에 참여 중일 때는 바꿀 수 없어요. 방에서 나간 뒤 변경해 주세요"}
+              right={homeLabel || "미설정"}
+              onClick={canChangeHome ? onChangeHome : undefined} />
+          </Group>
+        </div>
+      </div>
+    );
+  }
+
   /* 메인 */
   return (
     <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
@@ -310,7 +362,17 @@ React · Vite · Firebase Firestore · Netlify`,
 
         <Group title="지원">
           <Row label="문의하기" hint="버그 제보나 의견을 남겨주세요" onClick={openContact} />
-          <Row label="앱 공유하기" hint={String(CFG.siteUrl || "").replace(/\/+$/, "") + "/"} onClick={copyLink} />
+          <Row label="앱 공유하기" hint={SHARE_URL} right="복사" onClick={copyLink} />
+          {copyFail && (
+            <div style={S.copyFallback}>
+              <p style={{ fontSize: 11.5, color: "var(--ink-soft)", lineHeight: 1.6, marginBottom: 8 }}>
+                이 환경에서는 자동 복사가 막혀 있어요. 아래 주소를 눌러 전체 선택한 뒤 복사해 주세요.
+              </p>
+              <input readOnly value={SHARE_URL}
+                onFocus={e => e.target.select()} onClick={e => e.target.select()}
+                style={{ ...S.codeInput, width: "100%", boxSizing: "border-box", fontSize: 12.5 }} />
+            </div>
+          )}
           <Row label="이용약관" onClick={() => { setDoc("terms"); setView("doc"); }} />
           <Row label="개인정보처리방침" onClick={() => { setDoc("privacy"); setView("doc"); }} />
           <Row label="만든 사람" onClick={() => { setDoc("credit"); setView("doc"); }} />

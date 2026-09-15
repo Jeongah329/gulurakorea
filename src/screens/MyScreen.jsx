@@ -9,11 +9,12 @@ import { S } from "../ui/styles.js";
 const COLL_ICON = { "영수증":"🧾", "인증샷":"📷", "면제":"🧳" };
 
 /* ───────── 마이페이지 ───────── */
-export function MyScreen({score,coins,inventory,roomCards=[],ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostAdjacent,activeTrip,myName,avatar}){
+export function MyScreen({score,coins,inventory,roomCards=[],ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostAdjacent,activeTrip,myName,avatar,onEditProfile}){
   const [showAllCards,setShowAllCards] = useState(false);
   const shownCards = showAllCards ? cards : cards.slice(0,3);
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
-    <div style={S.profile}><div style={{...S.avatar, ...(avatar?{background:`url(${avatar}) center/cover no-repeat`}:{})}}>{avatar?"":"👤"}</div><div><p style={{fontFamily:"'HiKR',sans-serif",fontSize:18,color:"var(--ink)"}}>{myName || "여행자"}</p><p style={{fontSize:12,color:"var(--ink-soft)"}}>{origin?.label||"출발 지역 미설정"}{room?` · 방 ${room.code}`:""}</p></div></div>
+    <div style={S.profile}><div style={{...S.avatar, ...(avatar?{background:`url(${avatar}) center/cover no-repeat`}:{})}}>{avatar?"":"👤"}</div><div><p style={{fontFamily:"'HiKR',sans-serif",fontSize:18,color:"var(--ink)"}}>{myName || "여행자"}</p><p style={{fontSize:12,color:"var(--ink-soft)"}}>{origin?.label||"출발 지역 미설정"}{room?` · 방 ${room.code}`:""}</p></div>
+      <button onClick={onEditProfile} aria-label="프로필 수정" style={S.profileEdit}>✏️</button></div>
     <div style={S.statRow}><Stat k="점령 점수" v={score} c="var(--stamp)"/><Stat k="여행 코인" v={coins} c="var(--gold)"/><Stat k="정복 지역" v={ownedCount} c="var(--sea)"/></div>
     <div style={S.section}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
