@@ -7,7 +7,7 @@ export function Splash({onStart}){
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"28px 26px",textAlign:"center"}}>
         <span style={S.splashEyebrow}>주사위로 떠나는 랜덤 국내여행</span>
         <h1 style={S.splashTitle}>대한민국</h1>
-        <h1 style={S.splashTitle2}>부루마블</h1>
+        <h1 style={S.splashTitle2}>대한민국</h1>
         <div style={{margin:"20px 0 16px"}}><SplashArt/></div>
         <p style={S.splashSub}>주사위를 굴리면 목적지가 봉투에 담겨 배정돼요. 현장에서 인증해 전국을 점령하고, 소멸 위기 지역은 2배 점수 황금 타일로 차지하세요.</p>
       </div>

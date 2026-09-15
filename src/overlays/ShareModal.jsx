@@ -9,7 +9,7 @@ export function ShareModal({ room, onClose, flash }){
   const code = room?.code || "";
   const link = inviteLink(code);
   function share(){
-    if(typeof navigator!=="undefined" && navigator.share){ navigator.share({title:"대한민국 부루마블", text:`방 코드 ${code} 로 함께 전국을 점령해요!`, url:link}).catch(()=>{}); }
+    if(typeof navigator!=="undefined" && navigator.share){ navigator.share({title:"굴러라 대한민국", text:`방 코드 ${code} 로 함께 전국을 점령해요!`, url:link}).catch(()=>{}); }
     else { try{ navigator.clipboard.writeText(link); }catch(e){} flash("초대 링크가 복사되었어요"); }
   }
   function copy(){ try{ navigator.clipboard.writeText(link); }catch(e){} flash("초대 링크 복사 완료 · 친구가 링크를 열면 코드가 자동으로 입력돼요"); }
@@ -20,7 +20,7 @@ export function ShareModal({ room, onClose, flash }){
       Kakao.Share.sendDefault({
         objectType:"feed",
         content:{
-          title:"대한민국 부루마블",
+          title:"굴러라 대한민국",
           description:`${code} 방에 초대되었어요. 링크를 열면 초대 코드가 자동으로 입력돼요.`,
           imageUrl: shareImage(),
           imageWidth: 1200, imageHeight: 630,

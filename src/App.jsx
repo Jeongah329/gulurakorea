@@ -507,7 +507,7 @@ export default function App(){
       <div className="app-shell" style={S.phone}>
         {!started ? <Splash onStart={()=>setStarted(true)}/> : (<>
         <header className="app-bar" style={S.appbar}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}><DiceLogo/><span style={S.wordmark}>대한민국 부루마블</span></div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}><DiceLogo/><span style={S.wordmark}>굴러라 대한민국</span></div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={S.coinPill}>🪙 {coins}</div>
             <button onClick={()=>setShopOpen(true)} aria-label="카드 상점" style={S.shopBtn}>

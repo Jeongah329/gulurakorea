@@ -167,7 +167,7 @@ export function SettingsSheet({
     },
     credit: {
       title: "만든 사람",
-      body: `대한민국 부루마블 — 굴러라 코리아
+      body: `굴러라 대한민국
 2026 한국관광콘텐츠랩 활용 공모전 출품작
 
 데이터 출처
