@@ -17,6 +17,8 @@ import { BOARD } from "./data/board.js";
 import { CardUseSheet } from "./overlays/CardUseSheet.jsx";
 import { SettingsSheet } from "./overlays/SettingsSheet.jsx";
 import { ShopSheet } from "./overlays/ShopSheet.jsx";
+import { LoginSheet } from "./overlays/LoginSheet.jsx";
+import { signOutUser, watchUser } from "./api/auth.js";
 import { DrawOverlay } from "./overlays/DrawOverlay.jsx";
 import { ResultOverlay } from "./overlays/ResultOverlay.jsx";
 import { ShareModal } from "./overlays/ShareModal.jsx";
@@ -40,9 +42,16 @@ export default function App(){
   const [settingsOpen,setSettingsOpen] = useState(false);
   const [settingsView,setSettingsView] = useState("main");
   const [shopOpen,setShopOpen] = useState(false);
+  const [user,setUser] = useState(null);            // 구글 로그인 사용자
+  const [loginAsk,setLoginAsk] = useState(null);    // "room" | "rank" — 로그인 요청 사유
   const [pendingJoinCode,setPendingJoinCode] = useState("");
-  const [myId] = useState(()=>getMyId());
+  const [anonId] = useState(()=>getMyId());
+  const myId = user ? user.uid : anonId;   // 로그인하면 구글 uid 를 식별자로 쓴다
   const [myName,setMyNameState] = useState(()=>getMyName());
+  useEffect(()=>watchUser(u=>{
+    setUser(u);
+    if(u && !getMyName() && u.name){ setMyNameState(u.name.slice(0,10)); persistMyName(u.name.slice(0,10)); }
+  }),[]);
   const [avatar,setAvatarState] = useState(()=>{
     try{ return window.localStorage.getItem("gulura_player_avatar") || ""; }catch(e){ return ""; }
   });
@@ -50,7 +59,7 @@ export default function App(){
   const [cards,setCards] = useState([]);
   const [rollsLeft,setRollsLeft] = useState(5);
   const [score,setScore] = useState(0);
-  const [coins,setCoins] = useState(120);
+  const [coins,setCoins] = useState(0);   // 출발 지역을 정해야 120코인이 들어온다
   const [inventory,setInventory] = useState([]); // 개인 카드 보유함
   const [roomCards,setRoomCards] = useState([]); // 방 카드 보유함
   const [boostAdjacent,setBoostAdjacent] = useState(false); // 🧭 인접 지역 예약
@@ -112,11 +121,11 @@ export default function App(){
   },[score, room?.code]);
   /* 명예의 전당 — 방과 무관하게 내 점수를 전체 순위표에 올린다 */
   useEffect(()=>{
-    if(!isFirebaseConfigured || score<=0) return;
+    if(!isFirebaseConfigured || !user || score<=0) return;
     const myTiles = Object.keys(ownership).filter(k=>ownership[k]==="me");
     const t = setTimeout(()=>publishScore(myId, myName, score, ownedCount, myTiles), 1200);
     return ()=>clearTimeout(t);
-  },[score, myName]);
+  },[score, myName, user]);
   useEffect(()=>{
     if(typeof navigator==="undefined" || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -271,15 +280,19 @@ export default function App(){
     setActiveTrip(null); setVerifyOpen(false); setRollsLeft(r=>r+1);
     flash("🎫 이번 여행을 포기하고 기회를 돌려받았어요");
   }
+  /* 🔍 미리 보기 — 메인에서 굴리기 전이나, 봉투를 열기 전 단계에서 쓸 수 있다 */
   function usePreviewCard(){
-    if(phase!=="main"){ flash("주사위 진행 중에는 사용할 수 없어요"); return; }
+    if(phase!=="main" && phase!=="sealed"){ flash("봉투를 열기 전까지만 사용할 수 있어요"); return; }
     if(!takePersonalCard("preview")) return;
-    flash("🔍 후보 3곳을 찾는 중…"); plannedRoll(3); setChooseMode("preview");
+    setCandidate(null); setDroppedCard(null);
+    flash("🔍 후보 3곳을 찾는 중…"); setChooseMode("preview"); plannedRoll(3);
   }
+  /* 🗺️ 지역 선택권 — 같은 단계에서 쓸 수 있고 후보를 8곳까지 펼친다 */
   function useSelectCard(){
-    if(phase!=="main"){ flash("주사위 진행 중에는 사용할 수 없어요"); return; }
+    if(phase!=="main" && phase!=="sealed"){ flash("봉투를 열기 전까지만 사용할 수 있어요"); return; }
     if(!takePersonalCard("select")) return;
-    flash("🗺️ 조건에 맞는 지역을 모으는 중…"); plannedRoll(8); setChooseMode("select");
+    setCandidate(null); setDroppedCard(null);
+    flash("🗺️ 조건에 맞는 지역을 모으는 중…"); setChooseMode("select"); plannedRoll(8);
   }
   function useAdjacentCard(){ if(!takePersonalCard("adjacent")) return; setBoostAdjacent(true); flash("🧭 다음 주사위는 내 영토 인접 지역 위주로 나와요"); }
   function useBonusCard(){ if(!takePersonalCard("bonus")) return; setBonusActive(true); flash("⭐ 다음 점령 점수가 늘어나요"); }
@@ -408,6 +421,7 @@ export default function App(){
   }
   async function joinRoom(code){
     if(!isFirebaseConfigured){ flash("온라인 방 기능을 쓰려면 Firebase 설정이 필요해요"); return; }
+    if(!user){ setLoginAsk("room"); return; }
     try{
       const mine = {}; Object.entries(ownership).forEach(([k,v])=>{ if(v==="me") mine[k]=v; });
       const joined = await joinRoomOnline(code, myId, myName, mine);
@@ -419,6 +433,7 @@ export default function App(){
 
   async function createRoom(){
     if(!isFirebaseConfigured){ flash("온라인 방 기능을 쓰려면 Firebase 설정이 필요해요"); return; }
+    if(!user){ setLoginAsk("room"); return; }
     try{
       const mine = {}; Object.entries(ownership).forEach(([k,v])=>{ if(v==="me") mine[k]=v; });
       const code = await createRoomOnline(myId, myName, mine);
@@ -434,7 +449,8 @@ export default function App(){
     setOwnership(o=> o[place.code] ? o : ({...o,[place.code]:"me"}));
     if(room?.code) syncOwnership(room.code, myId, place.code);
     setHomeSet(true); setHomeCode(place.code);
-    flash(`${place.name} · 출발 지역으로 등록했어요`);
+    setCoins(c=>c+120);
+    flash(`${place.name} · 출발 지역으로 등록했어요 · 🪙 120 지급`);
   }
   function updateMyName(n){ setMyNameState(n); persistMyName(n); }
 
@@ -478,7 +494,8 @@ export default function App(){
 
   function leaveRoom(){ if(room?.code) leaveRoomOnline(room.code, myId); setMembers([ME]); setRoom(null); setRoomCards([]); setThroneRegion(null); setOwnership(o=>{ const n={}; Object.entries(o).forEach(([k,v])=>{ if(v==="me") n[k]=v; }); return n; }); flash("방에서 나왔어요"); }
   function resetDemo(){
-    setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(120);
+    setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(0);
+    setHomeSet(false); setHomeCode(null); setProtectedRegions([]);
     setInventory([]); setRoomCards([]); setBoostAdjacent(false); setBonusActive(false);
     setRushCharges(0); setProtectedRegions([]); setThroneRegion(null); setChoices([]); setChooseMode(null);
     setAppliedBoosts([]); setActiveTrip(null); setVerifyOpen(false); resetToMain(); setTab("main");
@@ -513,7 +530,7 @@ export default function App(){
           {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,
             protectedRegions,throneRegion,hasProtectCard:hasPersonalCard("protect"),useProtectionCard,
             myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured,homeSet,homeCand,claimHome}}/>}
-          {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks:protectedRegions,myId,myName,score,online:isFirebaseConfigured}}/>}
+          {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks:protectedRegions,myId,myName,score,online:isFirebaseConfigured,signedIn:!!user,onNeedLogin:()=>setLoginAsk("rank")}}/>}
           {tab==="my" && <MyScreen {...{score,coins,inventory,roomCards,ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostAdjacent,activeTrip,myName,avatar,onEditProfile:()=>{ setSettingsView("account"); setSettingsOpen(true); }}}/>}
         </main>
         <nav className="app-nav" style={S.tabbar}>
@@ -536,12 +553,15 @@ export default function App(){
           hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
         {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} flash={flash}/>)}
+        {loginAsk && (<LoginSheet reason={loginAsk} flash={flash}
+          onClose={()=>setLoginAsk(null)} onDone={()=>setLoginAsk(null)}/>)}
         {shopOpen && (<ShopSheet coins={coins} onBuy={buyCard} onClose={()=>setShopOpen(false)} flash={flash}/>)}
         {settingsOpen && (<SettingsSheet
           key={settingsView} initialView={settingsView}
           onClose={()=>setSettingsOpen(false)}
           myName={myName} onNameChange={updateMyName}
           avatar={avatar} onAvatarChange={updateAvatar}
+          user={user} onSignIn={()=>setLoginAsk("room")} onSignOut={async()=>{ await signOutUser(); flash("로그아웃했어요"); }}
           room={room} leaveRoom={leaveRoom}
           homeLabel={homeCode ? (BOARD.find(b=>b.code===homeCode)?.name || "설정됨") : null}
           canChangeHome={!room} onChangeHome={changeHome}

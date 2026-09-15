@@ -112,6 +112,8 @@ export const S = {
   throneNote:{display:"flex",alignItems:"center",gap:8,background:"rgba(227,169,44,.14)",border:"1px solid rgba(227,169,44,.5)",borderRadius:12,padding:"9px 12px",fontSize:12,color:"var(--ink)",fontWeight:700},
   profileEdit:{marginLeft:"auto",background:"var(--paper)",border:"1.5px solid var(--line)",borderRadius:"50%",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,cursor:"pointer",padding:0,flexShrink:0},
   copyFallback:{padding:"11px 14px 13px",borderTop:"1px solid rgba(22,34,63,.07)"},
+  googleBtn:{display:"flex",alignItems:"center",justifyContent:"center",gap:9,width:"100%",padding:"13px",borderRadius:14,border:"1.5px solid var(--line)",background:"#fff",color:"#3c4043",fontSize:14,fontWeight:800,cursor:"pointer"},
+  lockNote:{background:"var(--paper-2)",borderRadius:14,padding:"26px 20px",textAlign:"center"},
   shopCoin:{display:"flex",alignItems:"center",background:"var(--paper-2)",borderRadius:14,padding:"13px 16px",marginBottom:10},
   shopRow:{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"11px 13px",borderRadius:14,border:"1.5px solid var(--line)",background:"var(--paper)",cursor:"pointer"},
   shopPrice:{fontFamily:"'HiKR',sans-serif",fontSize:14,color:"var(--ink)",background:"var(--paper-2)",borderRadius:20,padding:"5px 11px",flexShrink:0},

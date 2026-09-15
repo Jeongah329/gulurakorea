@@ -13,7 +13,7 @@ import { fetchAllTiles, fetchTopPlayers, rankOf } from "../api/leaderboard.js";
 
 const TOTAL = BOARD.length;
 
-export function RankScreen({ownership,members,memberById,myRegionCount,memberScore,room,trips,locks,myId,myName,score,online}){
+export function RankScreen({ownership,members,memberById,myRegionCount,memberScore,room,trips,locks,myId,myName,score,online,signedIn,onNeedLogin}){
   const [view,setView] = useState("region");   // region | hall
   const [hall,setHall] = useState(null);       // 명예의 전당 목록
   const [hallState,setHallState] = useState("idle");
@@ -24,11 +24,12 @@ export function RankScreen({ownership,members,memberById,myRegionCount,memberSco
   },[online,ownership]);
   useEffect(()=>{
     if(view!=="hall" || hall) return;
+    if(!signedIn){ setHallState("locked"); return; }
     if(!online){ setHallState("offline"); return; }
     setHallState("loading");
     fetchTopPlayers(20).then(list=>{ setHall(list); setHallState(list.length?"ok":"empty"); })
       .catch(()=>setHallState("error"));
-  },[view,online]);
+  },[view,online,signedIn]);
   const [animate,setAnimate] = useState(false);
   useEffect(()=>{ setAnimate(false); const t=setTimeout(()=>setAnimate(true),60); return ()=>clearTimeout(t); },[ownership]);
 
@@ -76,7 +77,7 @@ export function RankScreen({ownership,members,memberById,myRegionCount,memberSco
 
       {view==="hall" ? (
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <div style={S.rankHero}>
+          {hallState!=="locked" && <div style={S.rankHero}>
             <p style={{fontSize:12,color:"var(--ink-soft)"}}>내 점수</p>
             <div style={{display:"flex",alignItems:"baseline",gap:5}}>
               <span style={{fontFamily:"'HiKR',sans-serif",fontSize:42,color:"var(--stamp)"}}>{score}</span>
@@ -85,11 +86,21 @@ export function RankScreen({ownership,members,memberById,myRegionCount,memberSco
                 {myRank ? `전체 ${myRank}위` : "20위 밖"}
               </span>
             </div>
-          </div>
-          <p style={S.dropRateNote}>
+          </div>}
+          {hallState!=="locked" && <p style={S.dropRateNote}>
             여행자 전체의 점수 순위입니다. 방과 상관없이 모든 이용자가 함께 올라가며,
             점수가 바뀔 때마다 닉네임과 점수, 점령한 지역 수가 갱신됩니다.
-          </p>
+          </p>}
+          {hallState==="locked" && (
+            <div style={S.lockNote}>
+              <span style={{fontSize:30}}>🔐</span>
+              <b style={{display:"block",fontSize:15,color:"var(--ink)",margin:"10px 0 6px"}}>로그인이 필요합니다</b>
+              <p style={{fontSize:12.5,color:"var(--ink-soft)",lineHeight:1.7,marginBottom:14}}>
+                명예의 전당은 여행자 전체가 함께 올라가는 순위표예요.<br/>내 기록을 올리고 순위를 보려면 로그인해 주세요.
+              </p>
+              <button onClick={onNeedLogin} style={{...S.roomPrimary,width:"100%"}}>로그인하기</button>
+            </div>
+          )}
           {hallState==="loading" && <p style={S.empty}>순위를 불러오는 중이에요…</p>}
           {hallState==="offline" && <p style={S.empty}>온라인 연결이 필요해요.</p>}
           {hallState==="error" && <p style={S.empty}>순위를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>}

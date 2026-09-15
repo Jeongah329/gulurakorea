@@ -35,7 +35,7 @@ function Row({ label, hint, right, onClick, danger }) {
 export function SettingsSheet({
   onClose, myName, onNameChange, avatar, onAvatarChange, room, leaveRoom,
   homeLabel, canChangeHome, onChangeHome,
-  resetDemo, onDeleteAll, flash, initialView,
+  resetDemo, onDeleteAll, flash, initialView, user, onSignIn, onSignOut,
 }) {
   const [view, setView] = useState(initialView || "main");   // main | account | name | doc | quit
   const [doc, setDoc] = useState(null);
@@ -146,7 +146,8 @@ export function SettingsSheet({
       body: `이 서비스는 회원가입과 로그인을 받지 않습니다. 이름, 연락처, 이메일 등 개인을 식별할 수 있는 정보를 수집하지 않습니다.
 
 1. 수집하는 정보
-· 익명 식별자 — 브라우저에 저장되는 무작위 문자열입니다. 방에서 참여자를 구분하는 데만 쓰입니다.
+· 익명 식별자 — 브라우저에 저장되는 무작위 문자열입니다. 로그인하지 않았을 때 참여자를 구분하는 데만 쓰입니다.
+· 구글 계정 정보 — 로그인을 선택한 경우에만 계정 고유번호와 이메일, 프로필 이름을 받습니다. 기기를 바꿔도 기록을 이어주기 위한 용도이며, 이메일은 다른 이용자에게 보이지 않습니다.
 · 닉네임 — 이용자가 직접 입력한 값입니다.
 · 위치 정보 — 도착 인증과 목적지 추천에 사용합니다. 인증 시점의 좌표를 그때만 사용하며 서버에 따로 저장하지 않습니다.
 · 게임 기록 — 점수, 점령한 지역, 인증 카드입니다.
@@ -327,6 +328,10 @@ React · Vite · Firebase Firestore · Netlify`,
         </div>
 
         <Group title="계정">
+          <Row label={user ? "로그인됨" : "구글 계정으로 로그인"}
+            hint={user ? (user.email || "기록이 계정에 이어져요") : "방과 명예의 전당을 쓰려면 로그인이 필요해요"}
+            right={user ? "로그아웃" : undefined}
+            onClick={user ? onSignOut : onSignIn} />
           <Row label="프로필 사진" hint="정사각형으로 잘라 브라우저에만 저장돼요"
             right={<span style={{ position: "relative", display: "inline-block" }}>
               <span style={{ ...S.avatarSm, ...(avatar ? { background: `url(${avatar}) center/cover no-repeat` } : {}) }}>{avatar ? "" : "👤"}</span>

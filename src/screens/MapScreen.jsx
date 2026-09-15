@@ -130,6 +130,8 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg,protectedRegi
     return Object.values(g).map(e=>({ ...e, d: outlineOf(e.parts) }));
   },[]);
   const selGroup = sel ? shapes.find(g=>g.code===sel) : null;
+  /* 광역시처럼 시·도와 칸 이름이 같은 곳은 전체 이름으로 보여준다 (대구 → 대구광역시) */
+  const tileLabel = (g)=> !g ? "" : (g.sido===g.name ? (SIDO_FULL[g.sido]||g.name) : `${g.sido} ${g.name}`);
   return (
     <div style={S.mapCard}>
       <svg viewBox="-8 -8 672 674" style={{width:"100%",height:"auto",display:"block"}}>
@@ -150,12 +152,12 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg,protectedRegi
                        strokeWidth={on||active?1.6:0.4}/>;
         })}
       </svg>
-      {selGroup && (<div style={S.selBar}><b style={{color:"var(--ink)"}}>{selGroup.sido===selGroup.name ? selGroup.name : `${selGroup.sido} ${selGroup.name}`}</b>
+      {selGroup && (<div style={S.selBar}><b style={{color:"var(--ink)"}}>{tileLabel(selGroup)}</b>
         <span style={{marginLeft:8,fontSize:12.5,color:"var(--ink-soft)"}}>{selOwner==="me"?"나의 영토":selOwner?`${memberById(selOwner)?.name}님의 영토`:"미점령"}</span>
         {sel===throneRegion && <span style={{marginLeft:8,fontSize:12,color:"var(--gold)",fontWeight:800}}>👑 왕좌</span>}
         {protectedRegions.includes(sel) && <span style={{marginLeft:8,fontSize:12,color:"var(--sea)",fontWeight:800}}>🛡️ 보호됨</span>}
         {selOwner==="me" && !protectedRegions.includes(sel) && hasProtectCard &&
-          <button disabled={!!protectFx} onClick={()=>playProtect(sel, selGroup.sido===selGroup.name?selGroup.name:`${selGroup.sido} ${selGroup.name}`)} style={{marginLeft:"auto",...S.cardActBtn,opacity:protectFx?.6:1}}>🛡️ 보호 사용</button>}
+          <button disabled={!!protectFx} onClick={()=>playProtect(sel, tileLabel(selGroup))} style={{marginLeft:"auto",...S.cardActBtn,opacity:protectFx?.6:1}}>🛡️ 보호 사용</button>}
         {selOwner && selOwner!=="me" && <span style={{marginLeft:"auto",fontSize:11.5,color:"var(--stamp)",fontWeight:700}}>통행료 {TOLL}🪙</span>}</div>)}
       {protectFx && <CardUseOverlay icon="🛡️" label={`${protectFx.name} 보호 중…`}/>}
       <p style={{fontSize:11,color:"var(--ink-soft)",textAlign:"center",margin:"2px 0 2px"}}>인증한 시·군·구가 내 색으로 칠해져요 · 지역을 탭해보세요</p>
