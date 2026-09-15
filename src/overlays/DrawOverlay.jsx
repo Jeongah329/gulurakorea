@@ -29,7 +29,7 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
   duration, rollsLeft, rollDice, depart, destOwner, tollDue,
   memberById, resetToMain, startTrip, appliedBoosts=[],
   hasReroll, useRerollCard, hasPreview, hasSelect, usePreviewCard, useSelectCard,
-  choices, chooseMode, chooseCandidate, cancelChoosing }){
+  choices, chooseMode, chooseCandidate, cancelChoosing, sealFromPreview, previewShortlist=[] }){
   const [fx,setFx] = useState(null); // {icon,label,fn} — 🔄/🎫 카드 사용 연출 재생 중
   const timerRef = useRef(null);
   useEffect(()=>()=>clearTimeout(timerRef.current),[]);
@@ -60,13 +60,15 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
             {phase==="rolling" && (<div style={{textAlign:"center"}}><div className="die-shake"><DieFace n={dieN} size={92}/></div><p style={S.olHint}>목적지를 봉투에 담는 중…</p></div>)}
             {phase==="choosing" && (
               <div style={{textAlign:"center",width:"100%"}} className="pop-in">
-                <p style={{color:"var(--paper)",fontSize:15,fontWeight:800,marginBottom:4}}>{chooseMode==="preview"?"🔍 후보 3곳 중 하나를 선택하세요":"🗺️ 원하는 지역을 직접 선택하세요"}</p>
-                <p style={{color:"var(--paper)",opacity:.6,fontSize:12,marginBottom:16}}>고른 지역이 바로 확정돼요 · 주사위 기회는 소모되지 않아요</p>
+                <p style={{color:"var(--paper)",fontSize:15,fontWeight:800,marginBottom:4}}>{chooseMode==="preview"?"🔍 후보 3곳을 확인하세요":"🗺️ 원하는 지역을 직접 선택하세요"}</p>
+                <p style={{color:"var(--paper)",opacity:.6,fontSize:12,marginBottom:16}}>{chooseMode==="preview"?"이 셋 중 한 곳이 봉투에 담겨요 · 주사위 기회는 소모되지 않아요":"고른 지역이 바로 확정돼요 · 주사위 기회는 소모되지 않아요"}</p>
                 {appliedRow}
                 {choices.length===0 ? (<p style={{color:"var(--paper)",opacity:.7,fontSize:13}}>후보를 찾는 중…</p>) : (
                   <div style={{display:"flex",flexDirection:"column",gap:10,maxHeight:"56vh",overflowY:"auto"}} className="scroll">
                     {choices.map((c,i)=>(
-                      <button key={i} onClick={()=>chooseCandidate(c)} style={{...S.choiceCard, background:`linear-gradient(135deg, ${c.grad[0]}, ${c.grad[1]})`}}>
+                      <button key={i} disabled={chooseMode==="preview"}
+                        onClick={chooseMode==="preview" ? undefined : ()=>chooseCandidate(c)}
+                        style={{...S.choiceCard, background:`linear-gradient(135deg, ${c.grad[0]}, ${c.grad[1]})`, cursor:chooseMode==="preview"?"default":"pointer"}}>
                         <div style={{textAlign:"left"}}>
                           <div style={{fontSize:11.5,opacity:.85,color:"#fff"}}>{c.sido} · {c.sigungu}{c.depop?" · ★ 황금타일":""}</div>
                           <div style={{fontSize:15.5,fontWeight:800,color:"#fff"}}>{c.title}</div>
@@ -74,7 +76,10 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
                         <span style={{fontSize:12,color:"#fff",opacity:.9,flexShrink:0}}>{c.distanceKm}km</span>
                       </button>))}
                   </div>)}
-                <button onClick={cancelChoosing} style={{...S.btnGhost,marginTop:16,width:"100%"}}>취소</button>
+                {chooseMode==="preview"
+                  ? <button onClick={sealFromPreview} disabled={choices.length===0}
+                      style={{...S.btnDepart,marginTop:16,width:"100%",opacity:choices.length?1:.5}}>확인했어요 · 봉투에 담기</button>
+                  : <button onClick={cancelChoosing} style={{...S.btnGhost,marginTop:16,width:"100%"}}>취소</button>}
               </div>)}
             {phase==="sealed" && candidate && (
               <div style={{textAlign:"center",width:"100%"}} className="pop-in">
@@ -84,6 +89,10 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
                 <div style={{display:"flex",gap:10,marginTop:18,width:"100%"}}>
                   <button onClick={rollDice} disabled={rollsLeft<=0} style={{...S.btnGhost,opacity:rollsLeft<=0?.4:1}}>다시 굴리기 · {rollsLeft}회</button>
                   <button onClick={depart} style={S.btnDepart}>출발 ✦ 봉투 열기</button></div>
+                {previewShortlist.length>0 && (
+                  <p style={{marginTop:10,fontSize:11.5,color:"var(--paper)",opacity:.75,lineHeight:1.6}}>
+                    🔍 미리 본 후보 · {previewShortlist.join(" / ")} 중 한 곳이에요
+                  </p>)}
                 {preOpenCards}
                 <p style={S.olSub}>출발하면 목적지가 확정돼요</p></div>)}
             {phase==="opening" && candidate && (<div style={{textAlign:"center",width:"100%"}}><Envelope opening={true} themes={[]} dist="" dur="" relaxed={false}/><p style={{color:"var(--paper)",opacity:.85,marginTop:22,fontSize:14}}>봉인을 여는 중…</p></div>)}

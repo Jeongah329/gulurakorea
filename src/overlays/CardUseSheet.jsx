@@ -10,7 +10,7 @@ import { S } from "../ui/styles.js";
 
 const USE_MS = CARD_USE_MS; // 카드 뒤집힘 애니메이션 재생 시간과 맞춘 지연
 
-export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip, ownedRegions=[], actions, goToMain }){
+export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip, ownedRegions=[], actions, goToMain, goToMap, goToMission }){
   const [done,setDone] = useState(null);
   const [using,setUsing] = useState(null); // { label } — 재생 중인 사용 연출
   const timerRef = useRef(null);
@@ -52,14 +52,14 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
       }
       case "pass": {
         const started = activeTrip && activeTrip.missions.some(m=>m.done);
-        const usable = !!activeTrip && !started;
+        const usable = !started && (!!candidate || !!activeTrip);
         body = usable ? (<>
           <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-          <button style={S.roomPrimary} onClick={()=>playUse(actions.pass, "이번 여행을 포기했어요")}>지금 사용하기</button>
+          <button style={S.roomPrimary} onClick={()=>playUse(actions.pass, "이번 목적지를 취소했어요")}>지금 사용하기</button>
         </>) : (
           <p style={S.sheetWarn}>
             {started ? "이미 인증을 시작한 여행은 포기할 수 없어요."
-                     : "출발한 여행이 있을 때 사용할 수 있어요."}
+                     : "취소할 목적지가 있을 때 사용할 수 있어요."}
           </p>
         );
         break;
@@ -75,9 +75,8 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
         );
         break;
       }
-      case "adjacent":
-      case "bonus": {
-        const fn = card.id==="adjacent" ? actions.adjacent : actions.bonus;
+      case "adjacent": {
+        const fn = actions.adjacent;
         body = (<>
           <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
           <button style={S.roomPrimary} onClick={()=>playUse(fn, "다음 주사위/점령에 적용돼요")}>지금 사용하기</button>
@@ -88,7 +87,12 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
         const missions = activeTrip ? activeTrip.missions.map((m,i)=>({...m,i})).filter(m=>!m.done && m.t!=="명소") : [];
         body = !activeTrip ? (
           <p style={S.sheetWarn}>진행 중인 여행이 있을 때, 미션 인증 중에 사용할 수 있어요.</p>
-        ) : missions.length===0 ? (
+        ) : missions.length>0 ? (<>
+          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>
+            인증 화면에서 면제할 미션 옆의 🧳 면제권 버튼을 눌러 주세요.
+          </p>
+          <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMission && goToMission(); }}>미션 인증 화면으로 가기</button>
+        </>) : missions.length===0 ? (
           <p style={S.sheetWarn}>지금은 면제할 수 있는 미션이 없어요.</p>
         ) : (<>
           <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:10}}>면제할 미션을 선택하세요</p>
@@ -104,12 +108,10 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
         body = ownedRegions.length===0 ? (
           <p style={S.sheetWarn}>보호할 수 있는 내 영토가 없어요. 먼저 지역을 점령해 보세요.</p>
         ) : (<>
-          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:10}}>보호할 내 영토를 선택하세요</p>
-          <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"42vh",overflowY:"auto"}} className="scroll">
-            {ownedRegions.map(r=>(
-              <button key={r.code} style={S.sheetOption} onClick={()=>playUse(()=>actions.protect(r.code,true), `${r.sido} ${r.name} 지역을 보호했어요`)}>{r.sido} {r.name}</button>
-            ))}
-          </div>
+          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>
+            지도에서 보호할 내 영토를 누른 뒤 🛡️ 보호 사용 버튼을 눌러 주세요.
+          </p>
+          <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMap && goToMap(); }}>지도 탭으로 가기</button>
         </>);
         break;
       }

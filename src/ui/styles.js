@@ -95,6 +95,8 @@ export const S = {
   boardCount:{fontSize:12,color:"#8A93AD"},
   boardSidoRow:{display:"flex",alignItems:"center",gap:9,marginBottom:11,width:"100%",padding:"7px 2px",background:"transparent",border:"none",cursor:"pointer",textAlign:"left"},
   bGrid:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8},
+  holoBox:{background:"linear-gradient(135deg,rgba(30,142,138,.14),rgba(19,31,60,.10))",border:"1.5px solid rgba(30,142,138,.35)",borderRadius:14,padding:"11px 14px",marginBottom:12,display:"flex",flexDirection:"column",gap:5},
+  holoLine:{fontSize:12,fontWeight:700,color:"var(--stamp)",margin:0},
   homeCard:{background:"var(--paper-2)",borderRadius:16,padding:"15px 16px 16px",marginBottom:14,border:"1.5px solid var(--line)"},
   appliedRow:{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",marginTop:10},
   appliedTag:{fontSize:11,fontWeight:800,color:"var(--paper)",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",padding:"4px 9px",borderRadius:8,whiteSpace:"nowrap"},

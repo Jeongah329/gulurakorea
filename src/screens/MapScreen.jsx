@@ -9,7 +9,7 @@ import { CARD_USE_MS, CardUseOverlay, Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
-export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard}){
+export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard,rushCharges=0,reveals=[]}){
   const [view,setView] = useState("real");
   const [joining,setJoining] = useState(()=>!!pendingJoinCode);
   const [codeInput,setCodeInput] = useState(()=>pendingJoinCode||"");
@@ -42,6 +42,14 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
       <button onClick={()=>setView("tiles")} style={{...S.viewBtn,...(view==="tiles"?S.viewOn:{})}}>타일</button>
     </div>
 
+    {(rushCharges>0 || reveals.length>0) && (
+      <div style={S.holoBox}>
+        {rushCharges>0 && <p style={S.holoLine}>🔥 여행 러시 적용중 · 다음 점령 코인 1.5배</p>}
+        {reveals.map((r,i)=>(
+          <p key={i} style={S.holoLine}>📢 {r.who}님이 노리는 지역 · {r.where}</p>
+        ))}
+      </div>
+    )}
     {!homeSet && (
       <div style={S.homeCard}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>

@@ -39,6 +39,7 @@ export default function App(){
   const [homeSet,setHomeSet] = useState(false);   // 출발 지역을 정했는지
   const [homeCand,setHomeCand] = useState(null);  // 현재 위치로 찾은 출발 지역 후보
   const [homeCode,setHomeCode] = useState(null);  // 출발 지역으로 받은 게임판 코드
+  const [previewShortlist,setPreviewShortlist] = useState([]); // 🔍 미리 보기로 확인한 후보 3곳
   const [settingsOpen,setSettingsOpen] = useState(false);
   const [settingsView,setSettingsView] = useState("main");
   const [shopOpen,setShopOpen] = useState(false);
@@ -63,8 +64,9 @@ export default function App(){
   const [inventory,setInventory] = useState([]); // 개인 카드 보유함
   const [roomCards,setRoomCards] = useState([]); // 방 카드 보유함
   const [boostAdjacent,setBoostAdjacent] = useState(false); // 🧭 인접 지역 예약
-  const [bonusActive,setBonusActive] = useState(false); // ⭐ 점령 보너스 예약
   const [rushCharges,setRushCharges] = useState(0); // 🔥 여행 러시 잔여 사용 횟수
+  const [nationalActive,setNationalActive] = useState(false); // 🗺️ 전국 랜덤 예약
+  const [reveals,setReveals] = useState([]); // 📢 공개 여행지 — [{who,where}]
   const [protectedRegions,setProtectedRegions] = useState([]); // 🛡️ 점령 보호된 게임판 코드 (방에서는 Firestore 공유)
   const [throneRegion,setThroneRegion] = useState(null); // 👑 왕좌의 지역 sgg 코드
   const [choices,setChoices] = useState([]); // 🔍/🗺️ 카드로 고른 후보 목적지들
@@ -175,7 +177,7 @@ export default function App(){
     return f.length ? f : null;
   }
   async function drawPool(){
-    const distCap = DIST_STEPS[distIdx].cap;
+    const distCap = nationalActive ? 9999 : DIST_STEPS[distIdx].cap;
     let relaxed=false, source="sample", error=null, pool=[];
     try{
       const r = await fetchDestinations({ themes, distCap, origin: originRef.current });
@@ -208,6 +210,7 @@ export default function App(){
   }
   function boostBadges(){
     const b=[];
+    if(nationalActive) b.push({icon:"🗺️",label:"전국 랜덤 적용중"});
     if(boostAdjacent) b.push({icon:"🧭",label:"인접 지역 적용됨"});
     return b;
   }
@@ -229,13 +232,16 @@ export default function App(){
     setTimeout(()=>{
       clearInterval(rollTimer.current); setDieN(Math.floor(Math.random()*6)+1);
       setCandidate(pick); setRelaxedMsg(relaxed);
-      dropRandomCard();
-      setAppliedBoosts(usedBoosts);
+      setAppliedBoosts(usedBoosts); setNationalActive(false);
       if(usedBoosts.length) flash(usedBoosts.map(b=>`${b.icon} ${b.label}`).join(" · "));
       setPhase("sealed");
     }, wait);
   }
-  function depart(){ setPhase("opening"); setTimeout(()=> setPhase("revealed"), 1900); }
+  /* 봉투를 열 때 카드를 준다. 열지 않고 다시 굴리면 카드는 주어지지 않는다. */
+  function depart(){
+    setPhase("opening");
+    setTimeout(()=>{ dropRandomCard(); setPhase("revealed"); }, 1900);
+  }
 
   /* ───────── 개인 카드 — 🔍 미리보기 / 🗺️ 지역 선택권 : 사전 후보 선택 ───────── */
   async function plannedRoll(n){
@@ -272,20 +278,31 @@ export default function App(){
     if(!takePersonalCard("reroll")) return;
     flash("🔄 지역을 다시 배정했어요"); redrawCandidate();
   }
-  /* 🎫 여행 패스 — 이미 출발한 여행을 포기한다. 미션을 하나라도 인증했으면 쓸 수 없다. */
+  /* 🎫 여행 패스 — 이번 목적지를 취소하고 주사위 기회를 1회 돌려받는다.
+     봉투 단계든 출발한 뒤든 쓸 수 있지만, 인증을 시작한 여행은 포기할 수 없다. */
   function useTravelPassCard(){
-    if(!activeTrip){ flash("진행 중인 여행이 없어요"); return; }
-    if(activeTrip.missions.some(m=>m.done)){ flash("이미 인증을 시작한 여행은 포기할 수 없어요"); return; }
+    const started = activeTrip && activeTrip.missions.some(m=>m.done);
+    if(started){ flash("이미 인증을 시작한 여행은 포기할 수 없어요"); return; }
+    if(!candidate && !activeTrip){ flash("취소할 목적지가 없어요"); return; }
     if(!takePersonalCard("pass")) return;
     setActiveTrip(null); setVerifyOpen(false); setRollsLeft(r=>r+1);
-    flash("🎫 이번 여행을 포기하고 기회를 돌려받았어요");
+    resetToMain();
+    flash("🎫 이번 목적지를 취소하고 기회를 돌려받았어요");
   }
-  /* 🔍 미리 보기 — 메인에서 굴리기 전이나, 봉투를 열기 전 단계에서 쓸 수 있다 */
+  /* 🔍 미리 보기 — 후보 3곳을 미리 보여주고, 봉투를 열면 그 셋 중 하나가 나온다 */
   function usePreviewCard(){
     if(phase!=="main" && phase!=="sealed"){ flash("봉투를 열기 전까지만 사용할 수 있어요"); return; }
     if(!takePersonalCard("preview")) return;
     setCandidate(null); setDroppedCard(null);
     flash("🔍 후보 3곳을 찾는 중…"); setChooseMode("preview"); plannedRoll(3);
+  }
+  /* 미리 보기에서 확인만 하고 봉투로 넘어간다 — 셋 중 하나가 무작위로 배정된다 */
+  async function sealFromPreview(){
+    const list = choices.slice();
+    if(!list.length) return;
+    const pick = await finalizePick(list[Math.floor(Math.random()*list.length)]);
+    setPreviewShortlist(list.map(c=>`${c.sido} ${c.sigungu}`));
+    setCandidate(pick); setChoices([]); setChooseMode(null); setPhase("sealed");
   }
   /* 🗺️ 지역 선택권 — 같은 단계에서 쓸 수 있고 후보를 8곳까지 펼친다 */
   function useSelectCard(){
@@ -295,7 +312,6 @@ export default function App(){
     flash("🗺️ 조건에 맞는 지역을 모으는 중…"); setChooseMode("select"); plannedRoll(8);
   }
   function useAdjacentCard(){ if(!takePersonalCard("adjacent")) return; setBoostAdjacent(true); flash("🧭 다음 주사위는 내 영토 인접 지역 위주로 나와요"); }
-  function useBonusCard(){ if(!takePersonalCard("bonus")) return; setBonusActive(true); flash("⭐ 다음 점령 점수가 늘어나요"); }
   /* 주변 후보 목록에서 미션 장소를 바꿈 (인증 전에만 가능) */
   function setMissionPlace(idx,place){
     setActiveTrip(t=>{
@@ -338,9 +354,14 @@ export default function App(){
       else flash("🎲 아직 출발하지 않은 인원이 없어 조용히 지나갔어요");
     }
     else if(id==="reveal"){
-      const spot = SAMPLE_POOL[Math.floor(Math.random()*SAMPLE_POOL.length)];
-      const friend = members.find(m=>m.id!=="me");
-      flash(`📢 ${friend?.name||"친구"}님은 ${spot.sido} ${spot.sigungu} 근처를 노리는 중이에요`);
+      /* 방에 다른 사람이 있으면 전원, 없으면 한 명분만 공개한다 */
+      const others = members.filter(m=>m.id!=="me");
+      const list = (others.length ? others : [{name:"친구"}]).map(m=>{
+        const spot = SAMPLE_POOL[Math.floor(Math.random()*SAMPLE_POOL.length)];
+        return { who:m.name, where:`${spot.sido} ${spot.sigungu}` };
+      });
+      setReveals(list);
+      flash(`📢 ${list.length===1?`${list[0].who}님이`:"여행자들이"} 노리는 지역이 지도에 표시됐어요`);
     }
     else if(id==="throne"){
       const cands = BOARD.filter(t=>ownership[t.code]!=="me");
@@ -348,7 +369,8 @@ export default function App(){
       if(t){ setThroneRegion(t.code); flash(`👑 ${t.sido} ${t.name}이(가) 왕좌의 지역이 됐어요 · 최초 점령 +150점`); }
       else flash("👑 왕좌로 삼을 지역을 찾지 못했어요");
     }
-    else if(id==="rush"){ setRushCharges(c=>c+1); flash("🔥 여행 러시! 다음 점령 점수가 크게 올라요"); }
+    else if(id==="national"){ setNationalActive(true); flash("🗺️ 다음 여행은 전국에서 뽑혀요"); }
+    else if(id==="rush"){ setRushCharges(c=>c+1); flash("🔥 여행 러시! 다음 점령 코인이 1.5배가 돼요"); }
   }
 
   const destOwner = candidate ? ownership[boardCode(candidate.sgg)] : undefined;
@@ -362,7 +384,7 @@ export default function App(){
       missions: candidate.missions.map(m=>({ ...m, method:methodFor(m.t), done:false, receipt:null, gps:null })) });
     setPhase("main"); setCandidate(null); setDroppedCard(null); setTab("main"); setVerifyOpen(true);
   }
-  function resetToMain(){ setPhase("main"); setCandidate(null); setDroppedCard(null); setRelaxedMsg(false); setChoices([]); setChooseMode(null); setAppliedBoosts([]); }
+  function resetToMain(){ setPhase("main"); setCandidate(null); setDroppedCard(null); setRelaxedMsg(false); setChoices([]); setChooseMode(null); setAppliedBoosts([]); setPreviewShortlist([]); }
   function setMissionDone(idx,payload){ setActiveTrip(t=>{ const ms=t.missions.map((m,i)=>i===idx?{...m,done:true,...payload}:m); return {...t,missions:ms}; }); }
 
   function applyConquer(){
@@ -372,12 +394,17 @@ export default function App(){
     let base, label, boosted=false, throneHit=false, challengeResult=null;
     if(t.outcome==="conquer"){
       base=t.depop?200:100;
-      if(bonusActive || rushCharges>0){ base=Math.round(base*1.5); boosted=true; }
+      /* ⭐ 점령 보너스는 들고 있으면 자동으로 쓰인다 */
+      const autoBonus = hasPersonalCard("bonus");
+      if(autoBonus || rushCharges>0){ base=Math.round(base*1.5); boosted=true; }
       if(throneRegion && boardCode(t.sgg)===throneRegion){ base+=150; throneHit=true; }
       setOwnership(o=>({...o,[boardCode(t.sgg)]:"me"}));
       if(room?.code) syncOwnership(room.code, myId, boardCode(t.sgg));
-      label=`${t.sigungu} 점령`; setCoins(c=>c+(t.depop?60:30));
-      if(bonusActive) setBonusActive(false);
+      let coinGain = t.depop?60:30;
+      if(rushCharges>0) coinGain = Math.round(coinGain*1.5);   // 🔥 여행 러시 — 코인 1.5배
+      if(throneHit) coinGain += 150;                            // 👑 왕좌의 지역 — 코인 +150
+      label=`${t.sigungu} 점령`; setCoins(c=>c+coinGain);
+      if(autoBonus) takePersonalCard("bonus");
       if(rushCharges>0) setRushCharges(c=>Math.max(0,c-1));
       if(throneHit) setThroneRegion(null);
     }
@@ -496,7 +523,7 @@ export default function App(){
   function resetDemo(){
     setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(0);
     setHomeSet(false); setHomeCode(null); setProtectedRegions([]);
-    setInventory([]); setRoomCards([]); setBoostAdjacent(false); setBonusActive(false);
+    setInventory([]); setRoomCards([]); setBoostAdjacent(false); setNationalActive(false); setReveals([]);
     setRushCharges(0); setProtectedRegions([]); setThroneRegion(null); setChoices([]); setChooseMode(null);
     setAppliedBoosts([]); setActiveTrip(null); setVerifyOpen(false); resetToMain(); setTab("main");
   }
@@ -526,12 +553,13 @@ export default function App(){
         </header>
         <main style={S.body} className="app-body scroll">
           {tab==="main" && <MainScreen {...{themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify:()=>setVerifyOpen(true),finishTrip,origin,apiStatus,
-            boostAdjacent,bonusActive,rushCharges}}/>}
+            boostAdjacent,bonusActive:hasPersonalCard("bonus"),rushCharges,nationalActive,previewShortlist}}/>}
           {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,
             protectedRegions,throneRegion,hasProtectCard:hasPersonalCard("protect"),useProtectionCard,
+            rushCharges,reveals,
             myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured,homeSet,homeCand,claimHome}}/>}
           {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks:protectedRegions,myId,myName,score,online:isFirebaseConfigured,signedIn:!!user,onNeedLogin:()=>setLoginAsk("rank")}}/>}
-          {tab==="my" && <MyScreen {...{score,coins,inventory,roomCards,ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostAdjacent,activeTrip,myName,avatar,onEditProfile:()=>{ setSettingsView("account"); setSettingsOpen(true); }}}/>}
+          {tab==="my" && <MyScreen {...{score,coins,inventory,roomCards,ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive:hasPersonalCard("bonus"),rushCharges,boostAdjacent,nationalActive,activeTrip,myName,avatar,onEditProfile:()=>{ setSettingsView("account"); setSettingsOpen(true); }}}/>}
         </main>
         <nav className="app-nav" style={S.tabbar}>
           {[["main","🎲","메인"],["map","🗺️","지도"],["rank","🏆","랭킹"],["my","👤","마이"]].map(([id,ic,lb])=>(
@@ -547,7 +575,7 @@ export default function App(){
             memberById,resetToMain,startTrip,appliedBoosts,
             hasReroll:hasPersonalCard("reroll"),useRerollCard,
             hasPreview:hasPersonalCard("preview"),hasSelect:hasPersonalCard("select"),usePreviewCard,useSelectCard,
-            choices,chooseMode,chooseCandidate,cancelChoosing}}/>)}
+            choices,chooseMode,chooseCandidate,cancelChoosing,sealFromPreview,previewShortlist}}/>)}
 
         {verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onMissionPlace={setMissionPlace} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}
           hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard}/>)}
@@ -568,9 +596,10 @@ export default function App(){
           resetDemo={resetDemo} onDeleteAll={deleteAll} flash={flash}/>)}
         {cardSheet && (<CardUseSheet card={cardSheet.card} kind={cardSheet.kind} onClose={closeCard}
           phase={phase} candidate={candidate} activeTrip={activeTrip} ownedRegions={ownedProtectableRegions()}
-          goToMain={()=>setTab("main")}
+          goToMain={()=>setTab("main")} goToMap={()=>setTab("map")}
+          goToMission={()=>{ setTab("main"); setVerifyOpen(true); }}
           actions={{ reroll:useRerollCard, pass:useTravelPassCard, preview:usePreviewCard, select:useSelectCard,
-            adjacent:useAdjacentCard, bonus:useBonusCard,
+            adjacent:useAdjacentCard,
             mission_exempt:useMissionExemptCard, protect:useProtectionCard, room:useRoomCard }}/>)}
         {toast && <div style={S.toast} className="toast-in">{toast}</div>}
       </div>
