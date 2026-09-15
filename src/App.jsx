@@ -8,6 +8,7 @@ import {
   leaveRoomOnline, setMyName as persistMyName, subscribeRoom, syncLock, syncOwnership, syncScore,
 } from "./api/rooms.js";
 import { isFirebaseConfigured } from "./firebase.js";
+import { publishScore, removeMyRecord } from "./api/leaderboard.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
 import { DIST_STEPS, ME, PERSONAL_CARDS, ROOM_CARDS, TOLL, methodFor } from "./data/constants.js";
 import { SAMPLE_POOL } from "./data/sampleDestinations.js";
@@ -39,6 +40,9 @@ export default function App(){
   const [pendingJoinCode,setPendingJoinCode] = useState("");
   const [myId] = useState(()=>getMyId());
   const [myName,setMyNameState] = useState(()=>getMyName());
+  const [avatar,setAvatarState] = useState(()=>{
+    try{ return window.localStorage.getItem("gulura_player_avatar") || ""; }catch(e){ return ""; }
+  });
   const [trips,setTrips] = useState([]);
   const [cards,setCards] = useState([]);
   const [rollsLeft,setRollsLeft] = useState(5);
@@ -103,6 +107,13 @@ export default function App(){
     if(!room?.code || !isFirebaseConfigured) return;
     syncScore(room.code, myId, score);
   },[score, room?.code]);
+  /* 명예의 전당 — 방과 무관하게 내 점수를 전체 순위표에 올린다 */
+  useEffect(()=>{
+    if(!isFirebaseConfigured || score<=0) return;
+    const myTiles = Object.keys(ownership).filter(k=>ownership[k]==="me");
+    const t = setTimeout(()=>publishScore(myId, myName, score, ownedCount, myTiles), 1200);
+    return ()=>clearTimeout(t);
+  },[score, myName]);
   useEffect(()=>{
     if(typeof navigator==="undefined" || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -424,6 +435,15 @@ export default function App(){
   }
   function updateMyName(n){ setMyNameState(n); persistMyName(n); }
 
+  /* 프로필 사진 — 브라우저에만 저장한다. 빈 값을 넣으면 기본 아이콘으로 돌아간다. */
+  function updateAvatar(dataUrl){
+    setAvatarState(dataUrl || "");
+    try{
+      if(dataUrl) window.localStorage.setItem("gulura_player_avatar", dataUrl);
+      else window.localStorage.removeItem("gulura_player_avatar");
+    }catch(e){ flash("사진이 너무 커서 저장하지 못했어요"); }
+  }
+
   /* 출발 지역 다시 정하기 — 기존에 받은 한 칸을 반납하고 지도 탭에서 새로 고르게 한다 */
   function changeHome(){
     if(room?.code){ flash("방에 참여 중일 때는 바꿀 수 없어요"); return; }
@@ -437,8 +457,10 @@ export default function App(){
     if(reason) { try{ console.info("[탈퇴 사유]", reason); }catch(e){} }
     try{
       if(room?.code) leaveRoomOnline(room.code, myId);
+      removeMyRecord(myId);
       window.localStorage.removeItem("gulura_player_id");
       window.localStorage.removeItem("gulura_player_name");
+      window.localStorage.removeItem("gulura_player_avatar");
     }catch(e){}
     setTimeout(()=>{ try{ window.location.replace(String(window.location.origin)+"/"); }catch(e){ window.location.reload(); } }, 150);
   }
@@ -474,8 +496,8 @@ export default function App(){
           {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,
             protectedRegions,throneRegion,hasProtectCard:hasPersonalCard("protect"),useProtectionCard,
             myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured,homeSet,homeCand,claimHome}}/>}
-          {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks:protectedRegions}}/>}
-          {tab==="my" && <MyScreen {...{score,coins,inventory,roomCards,ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostAdjacent,activeTrip}}/>}
+          {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks:protectedRegions,myId,myName,score,online:isFirebaseConfigured}}/>}
+          {tab==="my" && <MyScreen {...{score,coins,inventory,roomCards,ownedCount,trips,cards,room,resetDemo,apiStatus,origin,openCard,bonusActive,rushCharges,boostAdjacent,activeTrip,myName,avatar}}/>}
         </main>
         <nav className="app-nav" style={S.tabbar}>
           {[["main","🎲","메인"],["map","🗺️","지도"],["rank","🏆","랭킹"],["my","👤","마이"]].map(([id,ic,lb])=>(
@@ -500,6 +522,7 @@ export default function App(){
         {settingsOpen && (<SettingsSheet
           onClose={()=>setSettingsOpen(false)}
           myName={myName} onNameChange={updateMyName}
+          avatar={avatar} onAvatarChange={updateAvatar}
           room={room} leaveRoom={leaveRoom}
           homeLabel={homeCode ? (BOARD.find(b=>b.code===homeCode)?.name || "설정됨") : null}
           canChangeHome={!room} onChangeHome={changeHome}

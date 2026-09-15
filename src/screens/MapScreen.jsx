@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { BOARD, SIDO_ACCENT, SIDO_FULL } from "../data/board.js";
 import { SIDO_ORDER, TOLL } from "../data/constants.js";
-import { SIGUNGU, boardCode, outlineOf } from "../lib/sigungu.js";
+import { DOKDO_CODE, DOKDO_SHAPE, SIGUNGU, boardCode, outlineOf } from "../lib/sigungu.js";
 import { CARD_USE_MS, CardUseOverlay, Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
@@ -125,12 +125,14 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg,protectedRegi
     });
     /* 이름은 게임판 타일 기준으로 맞춘다. 서울 강동구가 아니라 서울로 보여야 한다 */
     BOARD.forEach(t=>{ if(g[t.code]){ g[t.code].sido = t.sido; g[t.code].name = t.name; } });
+    /* 독도는 경계 데이터에 도형이 없어 직접 넣는다 */
+    g[DOKDO_CODE] = { code: DOKDO_CODE, sido: "경북", name: "독도", parts: [DOKDO_SHAPE] };
     return Object.values(g).map(e=>({ ...e, d: outlineOf(e.parts) }));
   },[]);
   const selGroup = sel ? shapes.find(g=>g.code===sel) : null;
   return (
     <div style={S.mapCard}>
-      <svg viewBox="-8 -8 636 674" style={{width:"100%",height:"auto",display:"block"}}>
+      <svg viewBox="-8 -8 672 674" style={{width:"100%",height:"auto",display:"block"}}>
         {/* 1단계 — 면만 칠한다. 선이 없으니 합쳐진 지역 안쪽에 구 경계가 보이지 않는다 */}
         {shapes.map(g=>{
           const owner = ownership[g.code];
@@ -139,6 +141,10 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg,protectedRegi
           return <path key={g.code} className={active?"mapBlink":""} d={g.d} fill={fill}
                        stroke={fill} strokeWidth={0.6} onClick={()=>setSel(g.code)} style={{cursor:"pointer"}}/>;
         })}
+        {/* 독도는 도형이 작아 이름표를 함께 표시한다 */}
+        <text x="643" y="158" textAnchor="middle" fontSize="11" fontWeight="700"
+              fill={ownership[DOKDO_CODE] ? ownerColor(ownership[DOKDO_CODE]) : "rgba(70,70,90,.6)"}
+              pointerEvents="none">독도</text>
         {/* 2단계 — 경계선. 합쳐진 지역은 조각마다 선을 그리지 않고 덩어리 테두리만 남긴다 */}
         {shapes.map(g=>{
           const active = boardCode(activeSgg||"")===g.code;

@@ -1,7 +1,7 @@
 /**
  * 설정 시트 — 계정 · 게임 · 정보 · 지원 · 탈퇴
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import CFG from "../config.js";
 import { APP_VERSION } from "../data/constants.js";
 import { S } from "../ui/styles.js";
@@ -10,7 +10,7 @@ function Group({ title, children }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <p style={S.setGroupTitle}>{title}</p>
-      <div style={S.setGroup}>{children}</div>
+      <div className="set-group" style={S.setGroup}>{children}</div>
     </div>
   );
 }
@@ -33,7 +33,7 @@ function Row({ label, hint, right, onClick, danger }) {
 }
 
 export function SettingsSheet({
-  onClose, myName, onNameChange, room, leaveRoom,
+  onClose, myName, onNameChange, avatar, onAvatarChange, room, leaveRoom,
   homeLabel, canChangeHome, onChangeHome,
   resetDemo, onDeleteAll, flash,
 }) {
@@ -44,6 +44,26 @@ export function SettingsSheet({
   const [reason, setReason] = useState("");     // 탈퇴 사유
   const [reasonEtc, setReasonEtc] = useState("");
   const [geo, setGeo] = useState("확인 중");
+  const fileRef = useRef(null);
+
+  /* 프로필 사진 — 정사각형 256px로 줄여서 브라우저에 저장한다 */
+  function pickAvatar(e) {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { flash("이미지 파일만 올릴 수 있어요"); return; }
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => { img.onload = () => {
+      const S2 = 256, c = document.createElement("canvas");
+      c.width = S2; c.height = S2;
+      const side = Math.min(img.width, img.height);
+      c.getContext("2d").drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S2, S2);
+      onAvatarChange(c.toDataURL("image/jpeg", 0.82));
+      flash("프로필 사진을 바꿨어요");
+    }; img.src = reader.result; };
+    reader.readAsDataURL(f);
+  }
 
   const QUIT_REASONS = [
     "여행을 자주 가지 않아요",
@@ -111,7 +131,8 @@ export function SettingsSheet({
 · 게임 기록 — 점수, 점령한 지역, 인증 카드입니다.
 
 2. 저장 위치
-혼자 플레이할 때는 브라우저 안에만 저장됩니다. 방에 참여하면 닉네임, 점수, 점령한 지역이 Google Firebase Firestore에 저장되어 같은 방 참여자에게 공유됩니다.
+게임 기록은 브라우저 안에 저장됩니다. 방에 참여하면 닉네임, 점수, 점령한 지역이 Google Firebase Firestore에 저장되어 같은 방 참여자에게 공유됩니다.
+또한 점수가 생기면 명예의 전당(전체 순위표)에 닉네임과 점수, 점령한 지역 수가 등록되어 모든 이용자에게 공개됩니다. 공개를 원하지 않으시면 설정의 탈퇴로 기록을 삭제할 수 있습니다.
 
 3. 보관과 삭제
 설정의 탈퇴를 누르면 브라우저에 저장된 기록과 참여 중인 방의 내 기록이 삭제됩니다. 브라우저 데이터를 지워도 같은 결과가 됩니다.
@@ -141,7 +162,7 @@ React · Vite · Firebase Firestore · Netlify`,
   if (view === "doc" && doc) {
     return (
       <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
-        <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
+        <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
           <div style={S.setHead}>
             <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
             <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>{DOCS[doc].title}</b>
@@ -157,7 +178,7 @@ React · Vite · Firebase Firestore · Netlify`,
   if (view === "name") {
     return (
       <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
-        <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
+        <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
           <div style={S.setHead}>
             <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
             <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>닉네임 바꾸기</b>
@@ -182,7 +203,7 @@ React · Vite · Firebase Firestore · Netlify`,
     const ready = reason && (reason !== "기타" || reasonEtc.trim());
     return (
       <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
-        <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
+        <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
           <div style={S.setHead}>
             <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
             <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>탈퇴</b>
@@ -223,7 +244,7 @@ React · Vite · Firebase Firestore · Netlify`,
     return (
       <div className="modal-scrim" style={S.modalScrim} onClick={() => setConfirm(null)}>
         <div style={{ ...S.sheet, maxWidth: 320, textAlign: "center", padding: "26px 22px 18px" }}
-          onClick={e => e.stopPropagation()} className="sheet-in">
+          onClick={e => e.stopPropagation()} className="sheet-in scroll">
           <span style={S.setDangerIcon}>🗑</span>
           <b style={{ display: "block", fontSize: 17, color: "var(--ink)", margin: "14px 0 8px" }}>
             {isQuit ? "정말 탈퇴하시겠어요?" : "기록을 초기화할까요?"}
@@ -245,7 +266,8 @@ React · Vite · Firebase Firestore · Netlify`,
   /* 메인 */
   return (
     <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
-      <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in">
+      <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
+        <input ref={fileRef} type="file" accept="image/*" onChange={pickAvatar} style={{ display: "none" }} />
         <div style={S.setHead}>
           <span style={{ minWidth: 52 }} />
           <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>설정</b>
@@ -253,6 +275,13 @@ React · Vite · Firebase Firestore · Netlify`,
         </div>
 
         <Group title="계정">
+          <Row label="프로필 사진" hint="정사각형으로 잘라 브라우저에만 저장돼요"
+            right={<span style={{ position: "relative", display: "inline-block" }}>
+              <span style={{ ...S.avatarSm, ...(avatar ? { background: `url(${avatar}) center/cover no-repeat` } : {}) }}>{avatar ? "" : "👤"}</span>
+            </span>}
+            onClick={() => fileRef.current && fileRef.current.click()} />
+          {avatar && <Row label="프로필 사진 지우기" hint="기본 아이콘으로 돌아가요"
+            onClick={() => { onAvatarChange(""); flash("기본 아이콘으로 바꿨어요"); }} />}
           <Row label="닉네임 바꾸기" hint="방에서 친구에게 보이는 이름이에요"
             right={myName || "미설정"} onClick={() => setView("name")} />
           <Row label="출발 지역 변경"
@@ -281,7 +310,7 @@ React · Vite · Firebase Firestore · Netlify`,
 
         <Group title="지원">
           <Row label="문의하기" hint="버그 제보나 의견을 남겨주세요" onClick={openContact} />
-          <Row label="앱 공유하기" hint="링크를 복사해 친구에게 알려주세요" onClick={copyLink} />
+          <Row label="앱 공유하기" hint={String(CFG.siteUrl || "").replace(/\/+$/, "") + "/"} onClick={copyLink} />
           <Row label="이용약관" onClick={() => { setDoc("terms"); setView("doc"); }} />
           <Row label="개인정보처리방침" onClick={() => { setDoc("privacy"); setView("doc"); }} />
           <Row label="만든 사람" onClick={() => { setDoc("credit"); setView("doc"); }} />

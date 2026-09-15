@@ -12,7 +12,8 @@ export const CSS = `
 html,body,#root{font-family:'MiceGothic',system-ui,sans-serif}
 button,input,select,textarea{font-family:inherit}
 button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
-.scroll::-webkit-scrollbar,.sheet::-webkit-scrollbar{width:0}
+.scroll::-webkit-scrollbar,.sheet::-webkit-scrollbar{width:0;height:0}
+.scroll,.sheet{scrollbar-width:none;-ms-overflow-style:none}
 .range{-webkit-appearance:none;height:6px;border-radius:6px;background:var(--paper);outline:none}
 .range::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--stamp);cursor:pointer;box-shadow:0 3px 8px rgba(19,31,60,.4);border:3px solid #fff}
 .range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--stamp);border:3px solid #fff;cursor:pointer}
@@ -29,6 +30,7 @@ button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 @keyframes burstk{0%{opacity:0;transform:translate(-50%,0) scale(.2) rotate(0deg)}18%{opacity:1;transform:translate(calc(-50% + var(--tx)*.25),calc(var(--ty)*.25)) scale(1) rotate(40deg)}100%{opacity:0;transform:translate(calc(-50% + var(--tx)),var(--ty)) scale(.15) rotate(200deg)}}.burst{animation:burstk 1.6s cubic-bezier(.15,.6,.3,1) forwards}
 @keyframes ringk{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}25%{opacity:.55}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}}.magic-ring{animation:ringk 1.5s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:.32s}
 @keyframes sheetin{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+.set-group > button:last-child{border-bottom:none!important}
 body.modal-open{overflow:hidden!important}
 body.modal-open .app-shell,body.modal-open .app-body{overflow:hidden!important}.sheet-in{animation:sheetin .3s cubic-bezier(.2,.9,.3,1)}
 @keyframes toastin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}.toast-in{animation:toastin .25s ease}
