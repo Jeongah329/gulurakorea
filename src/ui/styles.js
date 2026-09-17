@@ -51,6 +51,8 @@ export const S = {
   mission:{display:"flex",alignItems:"center",gap:10,background:"var(--paper-2)",borderRadius:12,padding:"11px 13px"},
   missionTag:{flexShrink:0,whiteSpace:"nowrap",fontSize:10.5,fontWeight:800,color:"var(--sea)",background:"rgba(30,142,138,.12)",padding:"3px 7px",borderRadius:6},
   modalScrim:{position:"absolute",inset:0,background:"rgba(13,23,48,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"18px 14px",zIndex:120},
+  /* 로그인 안내는 설정·상점 위에 떠야 한다 */
+  loginScrim:{position:"absolute",inset:0,background:"rgba(13,23,48,.62)",display:"flex",alignItems:"center",justifyContent:"center",padding:"18px 14px",zIndex:150},
   sheet:{background:"var(--paper)",width:"100%",maxWidth:430,maxHeight:"80%",overflowY:"auto",borderRadius:14,padding:"16px 18px 20px",boxShadow:"0 14px 44px rgba(0,0,0,.4)"},
   sheetGrab:{width:42,height:5,borderRadius:5,background:"var(--line)",margin:"0 auto 14px"},
   vCard:{background:"var(--paper-2)",borderRadius:14,padding:"12px 13px"}, vCardDone:{background:"rgba(30,142,138,.08)",border:"1px solid rgba(30,142,138,.3)"},

@@ -33,7 +33,7 @@ export function LoginSheet({ reason = "room", onClose, onDone, flash }) {
   }
 
   return (
-    <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
+    <div className="modal-scrim" style={S.loginScrim} onClick={onClose}>
       <div style={{ ...S.sheet, maxWidth: 340, textAlign: "center", padding: "26px 22px 20px" }}
         onClick={e => e.stopPropagation()} className="sheet-in scroll">
         <span style={{ fontSize: 40 }}>🔐</span>

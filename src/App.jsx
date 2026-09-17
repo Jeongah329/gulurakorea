@@ -630,8 +630,6 @@ export default function App(){
           hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
         {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} flash={flash}/>)}
-        {loginAsk && (<LoginSheet reason={loginAsk} flash={flash}
-          onClose={()=>setLoginAsk(null)} onDone={()=>setLoginAsk(null)}/>)}
         {shopOpen && (<ShopSheet coins={coins} onBuy={buyCard} onClose={()=>setShopOpen(false)} flash={flash}/>)}
         {settingsOpen && (<SettingsSheet
           key={settingsView} initialView={settingsView}
@@ -650,6 +648,8 @@ export default function App(){
           actions={{ reroll:useRerollCard, pass:useTravelPassCard, preview:usePreviewCard, select:useSelectCard,
             adjacent:useAdjacentCard,
             mission_exempt:useMissionExemptCard, protect:useProtectionCard, room:useRoomCard }}/>)}
+        {loginAsk && (<LoginSheet reason={loginAsk} flash={flash}
+          onClose={()=>setLoginAsk(null)} onDone={()=>setLoginAsk(null)}/>)}
         {toast && <div style={S.toast} className="toast-in">{toast}</div>}
       </div>
     </div>
