@@ -19,6 +19,7 @@ import { CardUseSheet } from "./overlays/CardUseSheet.jsx";
 import { SettingsSheet } from "./overlays/SettingsSheet.jsx";
 import { ShopSheet } from "./overlays/ShopSheet.jsx";
 import { LoginSheet } from "./overlays/LoginSheet.jsx";
+import { DevPanel } from "./overlays/DevPanel.jsx";
 import { signOutUser, watchUser } from "./api/auth.js";
 import { DrawOverlay } from "./overlays/DrawOverlay.jsx";
 import { ResultOverlay } from "./overlays/ResultOverlay.jsx";
@@ -46,6 +47,18 @@ export default function App(){
   const [settingsOpen,setSettingsOpen] = useState(false);
   const [settingsView,setSettingsView] = useState("main");
   const [shopOpen,setShopOpen] = useState(false);
+  /* 개발자 도구 — 로고 5연속 탭 또는 ?dev=1 */
+  const [devOpen,setDevOpen] = useState(()=>{
+    try{ return new URLSearchParams(window.location.search).get("dev")==="1"; }catch(e){ return false; }
+  });
+  const devTap = useRef({ n:0, t:0 });
+  function tapLogo(){
+    const now = Date.now();
+    const d = devTap.current;
+    d.n = (now - d.t < 2000) ? d.n + 1 : 1;
+    d.t = now;
+    if(d.n >= 5){ d.n = 0; setDevOpen(true); flash("🛠 개발자 도구"); }
+  }
   const [user,setUser] = useState(null);            // 구글 로그인 사용자
   const [loginAsk,setLoginAsk] = useState(null);    // "room" | "rank" — 로그인 요청 사유
   const [pendingJoinCode,setPendingJoinCode] = useState("");
@@ -612,7 +625,7 @@ export default function App(){
       <div className="app-shell" style={S.phone}>
         {!started ? <Splash onStart={()=>setStarted(true)}/> : (<>
         <header className="app-bar" style={S.appbar}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}><DiceLogo/><span style={S.wordmark}>굴러라 대한민국</span></div>
+          <div onClick={tapLogo} style={{display:"flex",alignItems:"center",gap:8,cursor:"default"}}><DiceLogo/><span style={S.wordmark}>굴러라 대한민국</span></div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={S.coinPill}>🪙 {coins}</div>
             <button onClick={()=>setShopOpen(true)} aria-label="카드 상점" style={S.shopBtn}>
@@ -677,6 +690,34 @@ export default function App(){
           actions={{ reroll:useRerollCard, pass:useTravelPassCard, preview:usePreviewCard, select:useSelectCard,
             adjacent:useAdjacentCard, extra_roll:useExtraRollCard,
             mission_exempt:useMissionExemptCard, protect:useProtectionCard, room:useRoomCard }}/>)}
+        {devOpen && (<DevPanel onClose={()=>setDevOpen(false)} flash={flash}
+          state={{ rollsLeft, coins, score, ownedCount }}
+          actions={{
+            addRolls:(n)=>setRollsLeft(r=>r+n),
+            setRolls:(n)=>setRollsLeft(n),
+            addCoins:(n)=>setCoins(c=>c+n),
+            setCoins:(n)=>setCoins(n),
+            addScore:(n)=>setScore(v=>v+n),
+            setScore:(n)=>setScore(n),
+            grantRandom:(n=1)=>{
+              setOwnership(o=>{
+                const next={...o};
+                const free=BOARD.filter(t=>!next[t.code]);
+                for(let i=0;i<n && free.length;i++){
+                  const k=Math.floor(Math.random()*free.length);
+                  next[free[k].code]="me"; free.splice(k,1);
+                }
+                return next;
+              });
+              flash(`${n}곳 점령 처리`);
+            },
+            clearOwnership:()=>{ setOwnership({}); setHomeSet(false); setHomeCode(null); flash("점령 기록을 비웠어요"); },
+            giveCard:(c,kind)=>{ if(kind==="room") setRoomCards(v=>[...v,c]); else setInventory(v=>[...v,c]); },
+            giveAllCards:()=>{ setInventory(v=>[...v,...PERSONAL_CARDS]); setRoomCards(v=>[...v,...ROOM_CARDS]); flash("카드를 전부 지급했어요"); },
+            clearCards:()=>{ setInventory([]); setRoomCards([]); flash("카드를 비웠어요"); },
+            rewindDay:()=>{ setRollDay("2000-01-01"); flash("날짜를 어제로 돌렸어요 · 곧 자정 충전이 돕니다"); },
+            resetHome:()=>{ setHomeSet(false); setHomeCode(null); setDevOpen(false); setTab("map"); flash("지도 탭에서 출발 지역을 다시 골라 주세요"); },
+          }}/>)}
         {loginAsk && (<LoginSheet reason={loginAsk} flash={flash}
           onClose={()=>setLoginAsk(null)} onDone={()=>setLoginAsk(null)}/>)}
         {toast && <div style={S.toast} className="toast-in">{toast}</div>}

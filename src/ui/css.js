@@ -31,6 +31,7 @@ button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 @keyframes ringk{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}25%{opacity:.55}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}}.magic-ring{animation:ringk 1.5s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:.32s}
 @keyframes sheetin{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}
 .set-group > button:last-child{border-bottom:none!important}
+[style*="devGroup"] > div:last-child{border-bottom:none}
 body.modal-open{overflow:hidden!important}
 body.modal-open .app-shell,body.modal-open .app-body{overflow:hidden!important}.sheet-in{animation:sheetin .3s cubic-bezier(.2,.9,.3,1)}
 @keyframes toastin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}.toast-in{animation:toastin .25s ease}
