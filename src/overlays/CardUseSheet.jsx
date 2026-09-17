@@ -75,6 +75,13 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
         );
         break;
       }
+      case "extra_roll": {
+        body = (<>
+          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
+          <button style={S.roomPrimary} onClick={()=>playUse(actions.extra_roll, "주사위 기회가 1회 늘었어요")}>지금 사용하기</button>
+        </>);
+        break;
+      }
       case "adjacent": {
         const fn = actions.adjacent;
         body = (<>

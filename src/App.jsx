@@ -9,9 +9,9 @@ import {
 } from "./api/rooms.js";
 import { isFirebaseConfigured } from "./firebase.js";
 import { fetchMySave, publishSave, publishScore, removeMyRecord } from "./api/leaderboard.js";
-import { clearLocal, loadLocal, migrate, pickSave, saveLocal } from "./lib/save.js";
+import { clearLocal, loadLocal, migrate, pickSave, saveLocal, today } from "./lib/save.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
-import { DIST_STEPS, ME, PERSONAL_CARDS, ROOM_CARDS, TOLL, methodFor } from "./data/constants.js";
+import { DAILY_ROLLS, DIST_STEPS, ME, PERSONAL_CARDS, ROOM_CARDS, TOLL, methodFor } from "./data/constants.js";
 import { SAMPLE_POOL } from "./data/sampleDestinations.js";
 import { SIGUNGU, boardCode, sggFromAddr } from "./lib/sigungu.js";
 import { BOARD } from "./data/board.js";
@@ -69,7 +69,9 @@ export default function App(){
     if(d.ownership) setOwnership(d.ownership);
     if(typeof d.score==="number") setScore(d.score);
     if(typeof d.coins==="number") setCoins(d.coins);
-    if(typeof d.rollsLeft==="number") setRollsLeft(d.rollsLeft);
+    /* 저장된 기록을 되돌릴 때도 날짜가 지났으면 새로 채운다 */
+    if(d.rollDay && d.rollDay !== today()){ setRollDay(today()); setRollsLeft(DAILY_ROLLS); }
+    else if(typeof d.rollsLeft==="number") setRollsLeft(d.rollsLeft);
     if(d.inventory) setInventory(d.inventory);
     if(d.roomCards) setRoomCards(d.roomCards);
     if(d.cards) setCards(d.cards);
@@ -91,7 +93,10 @@ export default function App(){
   });
   const [trips,setTrips] = useState(boot.trips || []);
   const [cards,setCards] = useState(boot.cards || []);
-  const [rollsLeft,setRollsLeft] = useState(boot.rollsLeft ?? 5);
+  /* 주사위는 매일 자정에 5회로 채워진다. 마지막으로 채운 날짜를 함께 저장해 둔다. */
+  const [rollDay,setRollDay] = useState(boot.rollDay || today());
+  const [rollsLeft,setRollsLeft] = useState(()=>
+    (boot.rollDay && boot.rollDay !== today()) ? DAILY_ROLLS : (boot.rollsLeft ?? DAILY_ROLLS));
   const [score,setScore] = useState(boot.score || 0);
   const [coins,setCoins] = useState(boot.coins || 0);   // 출발 지역을 정해야 120코인이 들어온다
   const [inventory,setInventory] = useState(boot.inventory || []); // 개인 카드 보유함
@@ -154,9 +159,26 @@ export default function App(){
     if(!room?.code || !isFirebaseConfigured) return;
     syncScore(room.code, myId, score);
   },[score, room?.code]);
+  /* 자정이 지나면 주사위를 다시 채운다.
+     1분마다 날짜를 확인하고, 화면을 다시 켰을 때도 곧바로 확인한다. */
+  useEffect(()=>{
+    function refill(){
+      const d = today();
+      if(d === rollDay) return;
+      setRollDay(d); setRollsLeft(DAILY_ROLLS);
+      flash(`🎲 새로운 하루 · 주사위 ${DAILY_ROLLS}회가 채워졌어요`);
+    }
+    const timer = setInterval(refill, 60000);
+    const onWake = ()=>{ if(document.visibilityState==="visible") refill(); };
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("focus", onWake);
+    refill();
+    return ()=>{ clearInterval(timer); document.removeEventListener("visibilitychange", onWake); window.removeEventListener("focus", onWake); };
+  },[rollDay]);
+
   /* 게임 기록 자동 저장 — 브라우저에 항상, 로그인했으면 계정에도 */
   const saveState = { score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,
-    rollsLeft,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
+    rollsLeft,rollDay,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
     themes,distIdx,duration,budget };
   useEffect(()=>{
     const data = pickSave(saveState);
@@ -165,7 +187,7 @@ export default function App(){
     const t = setTimeout(()=>publishSave(user.uid, data), 2000);
     return ()=>clearTimeout(t);
   },[score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,
-     rollsLeft,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
+     rollsLeft,rollDay,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
      themes,distIdx,duration,budget,myId,user]);
 
   /* 명예의 전당 — 방과 무관하게 내 점수를 전체 순위표에 올린다 */
@@ -325,6 +347,13 @@ export default function App(){
     if(!takePersonalCard("reroll")) return;
     flash("🔄 지역을 다시 배정했어요"); redrawCandidate();
   }
+  /* 🎲 주사위 하나 더 — 오늘 남은 굴리기 기회를 1회 늘린다 */
+  function useExtraRollCard(){
+    if(!takePersonalCard("extra_roll")) return;
+    setRollsLeft(r=>r+1);
+    flash("🎲 주사위 기회가 1회 늘었어요");
+  }
+
   /* 🎫 여행 패스 — 이번 목적지를 취소하고 주사위 기회를 1회 돌려받는다.
      봉투 단계든 출발한 뒤든 쓸 수 있지만, 인증을 시작한 여행은 포기할 수 없다. */
   function useTravelPassCard(){
@@ -569,7 +598,7 @@ export default function App(){
 
   function leaveRoom(){ if(room?.code) leaveRoomOnline(room.code, myId); setMembers([ME]); setRoom(null); setRoomCards([]); setThroneRegion(null); setOwnership(o=>{ const n={}; Object.entries(o).forEach(([k,v])=>{ if(v==="me") n[k]=v; }); return n; }); flash("방에서 나왔어요"); }
   function resetDemo(){
-    setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(0);
+    setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(DAILY_ROLLS); setRollDay(today()); setScore(0); setCoins(0);
     setHomeSet(false); setHomeCode(null); setProtectedRegions([]);
     clearLocal(myId);
     setInventory([]); setRoomCards([]); setBoostAdjacent(false); setNationalActive(false); setReveals([]);
@@ -646,7 +675,7 @@ export default function App(){
           goToMain={()=>setTab("main")} goToMap={()=>setTab("map")}
           goToMission={()=>{ setTab("main"); setVerifyOpen(true); }}
           actions={{ reroll:useRerollCard, pass:useTravelPassCard, preview:usePreviewCard, select:useSelectCard,
-            adjacent:useAdjacentCard,
+            adjacent:useAdjacentCard, extra_roll:useExtraRollCard,
             mission_exempt:useMissionExemptCard, protect:useProtectionCard, room:useRoomCard }}/>)}
         {loginAsk && (<LoginSheet reason={loginAsk} flash={flash}
           onClose={()=>setLoginAsk(null)} onDone={()=>setLoginAsk(null)}/>)}

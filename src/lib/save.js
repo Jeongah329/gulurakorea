@@ -21,7 +21,7 @@ export function pickSave(s) {
     homeSet: s.homeSet, homeCode: s.homeCode,
     inventory: s.inventory, roomCards: s.roomCards,
     cards: s.cards, trips: s.trips,
-    rollsLeft: s.rollsLeft,
+    rollsLeft: s.rollsLeft, rollDay: s.rollDay,
     protectedRegions: s.protectedRegions,
     throneRegion: s.throneRegion,
     boostAdjacent: s.boostAdjacent,
@@ -61,4 +61,11 @@ export function migrate(fromId, toId) {
   saveLocal(toId, mine);
   clearLocal(fromId);
   return mine;
+}
+
+/* 오늘 날짜를 YYYY-MM-DD 로. 자정이 지나면 값이 바뀐다. */
+export function today() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }

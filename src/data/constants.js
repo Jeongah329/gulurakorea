@@ -29,6 +29,7 @@ export const PERSONAL_CARDS = [
   { id:"mission_exempt", name:"미션 면제",   icon:"🧳", desc:"미션 하나 면제",             when:"mission"  },
   { id:"protect",        name:"점령 보호",   icon:"🛡️", desc:"내 영토를 영구히 보호",        when:"map"      },
   { id:"bonus",          name:"점령 보너스", icon:"⭐", desc:"가지고 있으면 다음 점령 때 자동으로 점수 1.5배", when:"auto" },
+  { id:"extra_roll",     name:"주사위 하나 더", icon:"🎲", desc:"주사위 굴리기 기회 +1회",        when:"anytime"  },
   { id:"adjacent",       name:"인접 지역",   icon:"🧭", desc:"내 영토 주변 지역 도전",       when:"preroll"  },
 ];
 
@@ -52,10 +53,14 @@ export const ROOM_CARDS = [
 export const CARD_PRICE = {
   reroll: 80, preview: 120, select: 200, pass: 100,
   mission_exempt: 150, protect: 250, bonus: 180, adjacent: 120,
+  extra_roll: 140,
 };
 
 /* 카드 획득 확률 — 화면에도 그대로 표시합니다 */
 export const CARD_DROP_RATE = { personal: 0.35, room: 0.18 };
+
+/* 하루에 주어지는 주사위 횟수 — 매일 자정에 이 값으로 채워집니다 */
+export const DAILY_ROLLS = 5;
 
 export const SIDO_ORDER = ["서울","인천","경기","강원","충남","세종","대전","충북","전북","전남","광주","경북","대구","경남","부산","울산","제주"];
 
