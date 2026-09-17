@@ -8,7 +8,8 @@ import {
   leaveRoomOnline, setMyName as persistMyName, subscribeRoom, syncLock, syncOwnership, syncScore,
 } from "./api/rooms.js";
 import { isFirebaseConfigured } from "./firebase.js";
-import { publishScore, removeMyRecord } from "./api/leaderboard.js";
+import { fetchMySave, publishSave, publishScore, removeMyRecord } from "./api/leaderboard.js";
+import { clearLocal, loadLocal, migrate, pickSave, saveLocal } from "./lib/save.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
 import { DIST_STEPS, ME, PERSONAL_CARDS, ROOM_CARDS, TOLL, methodFor } from "./data/constants.js";
 import { SAMPLE_POOL } from "./data/sampleDestinations.js";
@@ -32,13 +33,15 @@ import { CSS, S } from "./ui/styles.js";
 
 /* ───────── 메인 앱 ───────── */
 export default function App(){
+  /* 브라우저에 저장된 기록 — 모든 상태의 초기값으로 쓰이므로 가장 먼저 읽는다 */
+  const boot = (()=>{ try{ return loadLocal(getMyId()) || {}; }catch(e){ return {}; } })();
   const [tab,setTab] = useState("main");
   const [members,setMembers] = useState([ME]);
   const [room,setRoom] = useState(null);
-  const [ownership,setOwnership] = useState({}); // 게임판 코드 -> memberId
-  const [homeSet,setHomeSet] = useState(false);   // 출발 지역을 정했는지
+  const [ownership,setOwnership] = useState(boot.ownership || {}); // 게임판 코드 -> memberId
+  const [homeSet,setHomeSet] = useState(!!boot.homeSet);   // 출발 지역을 정했는지
   const [homeCand,setHomeCand] = useState(null);  // 현재 위치로 찾은 출발 지역 후보
-  const [homeCode,setHomeCode] = useState(null);  // 출발 지역으로 받은 게임판 코드
+  const [homeCode,setHomeCode] = useState(boot.homeCode || null);  // 출발 지역으로 받은 게임판 코드
   const [previewShortlist,setPreviewShortlist] = useState([]); // 🔍 미리 보기로 확인한 후보 3곳
   const [settingsOpen,setSettingsOpen] = useState(false);
   const [settingsView,setSettingsView] = useState("main");
@@ -49,35 +52,65 @@ export default function App(){
   const [anonId] = useState(()=>getMyId());
   const myId = user ? user.uid : anonId;   // 로그인하면 구글 uid 를 식별자로 쓴다
   const [myName,setMyNameState] = useState(()=>getMyName());
-  useEffect(()=>watchUser(u=>{
+  useEffect(()=>watchUser(async u=>{
     setUser(u);
-    if(u && !getMyName() && u.name){ setMyNameState(u.name.slice(0,10)); persistMyName(u.name.slice(0,10)); }
+    if(!u) return;
+    if(!getMyName() && u.name){ setMyNameState(u.name.slice(0,10)); persistMyName(u.name.slice(0,10)); }
+    /* 익명으로 쌓아둔 기록을 계정으로 옮기고, 계정에 남아 있던 기록이 있으면 불러온다 */
+    migrate(anonId, u.uid);
+    let data = loadLocal(u.uid);
+    if(!data){ data = await fetchMySave(u.uid); if(data) saveLocal(u.uid, data); }
+    if(data) applySave(data);
   }),[]);
+
+  /* 저장된 기록을 화면 상태로 되돌린다 */
+  function applySave(d){
+    if(!d) return;
+    if(d.ownership) setOwnership(d.ownership);
+    if(typeof d.score==="number") setScore(d.score);
+    if(typeof d.coins==="number") setCoins(d.coins);
+    if(typeof d.rollsLeft==="number") setRollsLeft(d.rollsLeft);
+    if(d.inventory) setInventory(d.inventory);
+    if(d.roomCards) setRoomCards(d.roomCards);
+    if(d.cards) setCards(d.cards);
+    if(d.trips) setTrips(d.trips);
+    if(d.protectedRegions) setProtectedRegions(d.protectedRegions);
+    if(typeof d.homeSet==="boolean") setHomeSet(d.homeSet);
+    if(d.homeCode!==undefined) setHomeCode(d.homeCode);
+    if(d.throneRegion!==undefined) setThroneRegion(d.throneRegion);
+    if(typeof d.rushCharges==="number") setRushCharges(d.rushCharges);
+    if(typeof d.boostAdjacent==="boolean") setBoostAdjacent(d.boostAdjacent);
+    if(typeof d.nationalActive==="boolean") setNationalActive(d.nationalActive);
+    if(d.themes) setThemes(d.themes);
+    if(typeof d.distIdx==="number") setDistIdx(d.distIdx);
+    if(d.duration) setDuration(d.duration);
+    if(d.budget) setBudget(d.budget);
+  }
   const [avatar,setAvatarState] = useState(()=>{
     try{ return window.localStorage.getItem("gulura_player_avatar") || ""; }catch(e){ return ""; }
   });
-  const [trips,setTrips] = useState([]);
-  const [cards,setCards] = useState([]);
-  const [rollsLeft,setRollsLeft] = useState(5);
-  const [score,setScore] = useState(0);
-  const [coins,setCoins] = useState(0);   // 출발 지역을 정해야 120코인이 들어온다
-  const [inventory,setInventory] = useState([]); // 개인 카드 보유함
-  const [roomCards,setRoomCards] = useState([]); // 방 카드 보유함
-  const [boostAdjacent,setBoostAdjacent] = useState(false); // 🧭 인접 지역 예약
-  const [rushCharges,setRushCharges] = useState(0); // 🔥 여행 러시 잔여 사용 횟수
-  const [nationalActive,setNationalActive] = useState(false); // 🗺️ 전국 랜덤 예약
+  const [trips,setTrips] = useState(boot.trips || []);
+  const [cards,setCards] = useState(boot.cards || []);
+  const [rollsLeft,setRollsLeft] = useState(boot.rollsLeft ?? 5);
+  const [score,setScore] = useState(boot.score || 0);
+  const [coins,setCoins] = useState(boot.coins || 0);   // 출발 지역을 정해야 120코인이 들어온다
+  const [inventory,setInventory] = useState(boot.inventory || []); // 개인 카드 보유함
+  const [roomCards,setRoomCards] = useState(boot.roomCards || []); // 방 카드 보유함
+  const [boostAdjacent,setBoostAdjacent] = useState(!!boot.boostAdjacent); // 🧭 인접 지역 예약
+  const [rushCharges,setRushCharges] = useState(boot.rushCharges || 0); // 🔥 여행 러시 잔여 사용 횟수
+  const [nationalActive,setNationalActive] = useState(!!boot.nationalActive); // 🗺️ 전국 랜덤 예약
   const [reveals,setReveals] = useState([]); // 📢 공개 여행지 — [{who,where}]
-  const [protectedRegions,setProtectedRegions] = useState([]); // 🛡️ 점령 보호된 게임판 코드 (방에서는 Firestore 공유)
-  const [throneRegion,setThroneRegion] = useState(null); // 👑 왕좌의 지역 sgg 코드
+  const [protectedRegions,setProtectedRegions] = useState(boot.protectedRegions || []); // 🛡️ 점령 보호된 게임판 코드 (방에서는 Firestore 공유)
+  const [throneRegion,setThroneRegion] = useState(boot.throneRegion || null); // 👑 왕좌의 지역 sgg 코드
   const [choices,setChoices] = useState([]); // 🔍/🗺️ 카드로 고른 후보 목적지들
   const [chooseMode,setChooseMode] = useState(null); // 'preview' | 'select'
   const [appliedBoosts,setAppliedBoosts] = useState([]); // 이번 뽑기에 실제로 적용된 카드 효과(배지 표시용)
   const [cardSheet,setCardSheet] = useState(null); // {card, kind} — 마이 탭에서 여는 통일된 카드 사용 시트
   const [toast,setToast] = useState(null);
-  const [themes,setThemes] = useState(["sea"]);
-  const [distIdx,setDistIdx] = useState(2);
-  const [duration,setDuration] = useState("당일치기");
-  const [budget,setBudget] = useState("mid");
+  const [themes,setThemes] = useState(boot.themes || ["sea"]);
+  const [distIdx,setDistIdx] = useState(boot.distIdx ?? 2);
+  const [duration,setDuration] = useState(boot.duration || "당일치기");
+  const [budget,setBudget] = useState(boot.budget || "mid");
   const [phase,setPhase] = useState("main");
   const [dieN,setDieN] = useState(1);
   const [candidate,setCandidate] = useState(null);
@@ -121,6 +154,20 @@ export default function App(){
     if(!room?.code || !isFirebaseConfigured) return;
     syncScore(room.code, myId, score);
   },[score, room?.code]);
+  /* 게임 기록 자동 저장 — 브라우저에 항상, 로그인했으면 계정에도 */
+  const saveState = { score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,
+    rollsLeft,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
+    themes,distIdx,duration,budget };
+  useEffect(()=>{
+    const data = pickSave(saveState);
+    saveLocal(myId, data);
+    if(!user) return;
+    const t = setTimeout(()=>publishSave(user.uid, data), 2000);
+    return ()=>clearTimeout(t);
+  },[score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,
+     rollsLeft,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
+     themes,distIdx,duration,budget,myId,user]);
+
   /* 명예의 전당 — 방과 무관하게 내 점수를 전체 순위표에 올린다 */
   useEffect(()=>{
     if(!isFirebaseConfigured || !user || score<=0) return;
@@ -512,6 +559,7 @@ export default function App(){
     try{
       if(room?.code) leaveRoomOnline(room.code, myId);
       removeMyRecord(myId);
+      clearLocal(myId); clearLocal(anonId);
       window.localStorage.removeItem("gulura_player_id");
       window.localStorage.removeItem("gulura_player_name");
       window.localStorage.removeItem("gulura_player_avatar");
@@ -523,6 +571,7 @@ export default function App(){
   function resetDemo(){
     setMembers([ME]); setRoom(null); setOwnership({}); setTrips([]); setCards([]); setRollsLeft(5); setScore(0); setCoins(0);
     setHomeSet(false); setHomeCode(null); setProtectedRegions([]);
+    clearLocal(myId);
     setInventory([]); setRoomCards([]); setBoostAdjacent(false); setNationalActive(false); setReveals([]);
     setRushCharges(0); setProtectedRegions([]); setThroneRegion(null); setChoices([]); setChooseMode(null);
     setAppliedBoosts([]); setActiveTrip(null); setVerifyOpen(false); resetToMain(); setTab("main");

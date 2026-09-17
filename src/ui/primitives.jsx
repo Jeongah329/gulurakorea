@@ -67,9 +67,10 @@ export function Envelope({ opening, themes, dist, dur, relaxed }){
     return { tx:Math.cos(a)*r, ty:Math.sin(a)*r-26, d:0.3+(i%7)*0.06, sz:i%4===0?9:i%3===0?5:7,
              c:i%3===0?"var(--gold)":i%3===1?"#FFF3CE":"#FFD98A" };
   });
-  return (<div style={S.envWrap}><div style={S.envBody}><p style={S.envLabel}>목적지 봉인</p><h3 style={S.envTitle}>어디로 가게 될까요?</h3>
-    {!opening && (<><div style={S.hintRow}>{themes.map((h,i)=><span key={i} style={S.hintChip}>{h}</span>)}{dist&&<span style={S.hintChip}>{dist}</span>}{dur&&<span style={S.hintChip}>{dur}</span>}</div>{relaxed && <p style={S.relax}>딱 맞는 곳이 없어 테마를 넓혔어요</p>}</>)}</div>
+  return (<div style={S.envWrap}><div style={S.envBody}>
     <div style={S.envFlap} className={opening?"flap-open":""}/><div style={S.envSeal} className={opening?"seal-crack":""}>출발</div>
+    <p style={S.envLabel}>목적지 봉인</p><h3 style={S.envTitle}>어디로 가게 될까요?</h3>
+    {!opening && (<><div style={S.hintRow}>{themes.map((h,i)=><span key={i} style={S.hintChip}>{h}</span>)}{dist&&<span style={S.hintChip}>{dist}</span>}{dur&&<span style={S.hintChip}>{dur}</span>}</div>{relaxed && <p style={S.relax}>딱 맞는 곳이 없어 테마를 넓혔어요</p>}</>)}</div>
     {opening && (<><div style={S.flash} className="flash"/><span className="magic-ring" style={{position:"absolute",top:46,left:"50%",width:120,height:120,borderRadius:"50%",border:"2px solid rgba(255,226,150,.85)",pointerEvents:"none",zIndex:4}}/>{burst.map((b,i)=>(<span key={i} className="burst" style={{"--tx":`${b.tx}px`,"--ty":`${b.ty}px`,animationDelay:`${b.d}s`,position:"absolute",top:40,left:"50%",width:b.sz,height:b.sz,borderRadius:"50%",background:b.c,boxShadow:`0 0 ${b.sz+4}px rgba(255,215,120,.9)`,pointerEvents:"none",zIndex:6}}/>))}</>)}</div>);
 }
 

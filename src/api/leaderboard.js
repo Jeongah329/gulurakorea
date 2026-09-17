@@ -9,7 +9,7 @@
  */
 import { db } from "../firebase";
 import {
-  collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc,
+  collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc,
 } from "firebase/firestore";
 
 const PLAYERS = "players";
@@ -72,4 +72,25 @@ export async function fetchAllTiles(max = 500) {
     console.warn("[leaderboard] 전체 점령 현황 조회 실패", e);
     return null;
   }
+}
+
+/* 로그인 계정에 저장해 둔 게임 기록을 가져온다. 기기를 바꿨을 때 복구용이다. */
+export async function fetchMySave(myId) {
+  if (!db || !myId) return null;
+  try {
+    const snap = await getDoc(doc(db, PLAYERS, String(myId)));
+    if (!snap.exists()) return null;
+    const d = snap.data();
+    return d && d.save ? d.save : null;
+  } catch (e) {
+    console.warn("[leaderboard] 기록 조회 실패", e);
+    return null;
+  }
+}
+
+/* 게임 기록을 계정에 저장한다. 순위표에 쓰는 문서에 함께 담는다. */
+export async function publishSave(myId, save) {
+  if (!db || !myId || !save) return;
+  try { await setDoc(doc(db, PLAYERS, String(myId)), { save, updatedAt: serverTimestamp() }, { merge: true }); }
+  catch (e) { console.warn("[leaderboard] 기록 저장 실패", e); }
 }
