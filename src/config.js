@@ -24,7 +24,7 @@ export default {
   /* 초대 링크에 쓸 서비스 주소. 미리보기 파일이나 로컬에서 열어도 항상 실서비스를 가리킨다. */
   /* 배포 주소. Cloudflare Pages·Netlify 어디에 올리든 VITE_SITE_URL 환경변수로 지정합니다.
      초대 링크와 카카오톡 공유 이미지 주소가 이 값을 기준으로 만들어집니다. */
-  siteUrl:     env.VITE_SITE_URL         || "https://gulura-korea.netlify.app",
+  siteUrl:     env.VITE_SITE_URL         || "https://gulurakorea.pages.dev",
   /* 설정 > 문의하기에서 열 구글 폼 주소. .env 의 VITE_CONTACT_FORM_URL 에 넣어 주세요. */
   contactFormUrl: env.VITE_CONTACT_FORM_URL || "",
 };
