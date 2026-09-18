@@ -167,9 +167,18 @@ export default function App(){
       Object.entries(data.ownership||{}).forEach(([sgg,pid])=>{ mapped[sgg] = pid===myId ? "me" : pid; });
       setOwnership(mapped);
       setProtectedRegions(Object.keys(data.locks||{}));
+      /* 내 색(ME.color)은 항상 나에게 쓰이므로, 같은 색을 쓰는 상대는 다른 색으로 바꿔 보여준다.
+         방을 만든 사람이 팔레트 첫 색을 받는 탓에 참여자 화면에서 나와 방장이 같은 색으로 보이던 문제. */
+      const OTHER = ["#8B6FE0","#34B5D6","#E39A3B","#E0608B","#5FA8E0","#C7A23B","#6FBF7A"];
+      const taken = new Set([ME.color]);
       const remote = Object.entries(data.members||{})
         .filter(([pid])=>pid!==myId)
-        .map(([pid,m])=>({ id:pid, name:m.name||"친구", color:m.color||"#999", score:m.score||0 }));
+        .map(([pid,m])=>{
+          let c = m.color || "#999";
+          if(taken.has(c)) c = OTHER.find(x=>!taken.has(x)) || `hsl(${[...pid].reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0,0)%360},55%,55%)`;
+          taken.add(c);
+          return { id:pid, name:m.name||"친구", color:c, score:m.score||0 };
+        });
       setMembers([ME, ...remote]);
     }, (err)=>{ flash("연결이 끊겼어요 · " + ((err&&err.message)||err)); });
     return unsub;
