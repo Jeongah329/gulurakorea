@@ -32,6 +32,8 @@ button:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 @keyframes sheetin{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}
 .set-group > button:last-child{border-bottom:none!important}
 [style*="devGroup"] > div:last-child{border-bottom:none}
+/* 모달은 화면 크기와 상관없이 항상 화면 기준으로 고정해 가운데에 띄운다 */
+.modal-scrim{position:fixed!important;inset:0!important;align-items:center!important;justify-content:center!important}
 body.modal-open{overflow:hidden!important}
 body.modal-open .app-shell,body.modal-open .app-body{overflow:hidden!important}.sheet-in{animation:sheetin .3s cubic-bezier(.2,.9,.3,1)}
 @keyframes toastin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}.toast-in{animation:toastin .25s ease}
@@ -90,9 +92,6 @@ body.modal-open .app-shell,body.modal-open .app-body{overflow:hidden!important}.
   .app-nav button span:first-child{font-size:27px!important}
   .app-nav button span:last-child{font-size:19px!important}
   .app-nav button:hover{background:rgba(22,34,63,.04)}
-
-  /* 설정 등 모달은 화면 기준으로 고정해 항상 가운데에 보이도록 */
-  .modal-scrim{position:fixed!important;inset:0!important}
 
   /* 시작 화면 — 버튼이 화면 폭만큼 늘어나지 않도록 */
   .app-splash{position:fixed!important}

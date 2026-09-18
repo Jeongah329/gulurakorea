@@ -36,7 +36,7 @@ export function CardFlipFX({ icon, label, labelColor="var(--ink-soft)" }) {
 /** 마이 탭 시트 바깥(여행 인증·지도·주사위 화면)에서 카드를 바로 쓸 때 덮는 전체 오버레이 */
 export function CardUseOverlay({ icon, label }) {
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(13,23,48,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 120 }} className="overlay-in">
+    <div className="modal-scrim overlay-in" style={{ position: "fixed", inset: 0, background: "rgba(13,23,48,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 190 }}>
       <CardFlipFX icon={icon} label={label} labelColor="#fff" />
     </div>
   );

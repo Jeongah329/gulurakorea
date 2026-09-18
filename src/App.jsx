@@ -59,9 +59,9 @@ export default function App(){
     if(devUnlocked){ setDevOpen(true); return; }
     const now = Date.now();
     const d = devTap.current;
-    d.n = (now - d.t < 2000) ? d.n + 1 : 1;
+    d.n = (now - d.t < 3000) ? d.n + 1 : 1;   // 10번을 채울 시간을 고려해 간격을 넉넉히
     d.t = now;
-    if(d.n < 5) return;
+    if(d.n < 10) return;
     d.n = 0;
     const input = window.prompt("");
     if(input === DEV_PASSCODE){ setDevUnlocked(true); setDevOpen(true); flash("🛠 개발자 도구"); }
@@ -490,7 +490,7 @@ export default function App(){
     else if(id==="throne"){
       const cands = BOARD.filter(t=>ownership[t.code]!=="me");
       const t = cands[Math.floor(Math.random()*cands.length)];
-      if(t){ setThroneRegion(t.code); flash(`👑 ${t.sido} ${t.name}이(가) 왕좌의 지역이 됐어요 · 최초 점령 +150점`); }
+      if(t){ setThroneRegion(t.code); setTab("map"); flash(`👑 ${t.sido} ${t.name}이(가) 왕좌의 지역이 됐어요 · 최초 점령 코인 +150`); }
       else flash("👑 왕좌로 삼을 지역을 찾지 못했어요");
     }
     else if(id==="national"){ setNationalActive(true); flash("🗺️ 다음 여행은 전국에서 뽑혀요"); }

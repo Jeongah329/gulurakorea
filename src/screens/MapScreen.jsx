@@ -166,9 +166,11 @@ export function RealMap({ownership,ownerColor,memberById,activeSgg,protectedRegi
         {shapes.map(g=>{
           const active = boardCode(activeSgg||"")===g.code;
           const on = sel===g.code;
+          /* 👑 왕좌의 지역은 노란 테두리로 표시한다 */
+          const throne = g.code===throneRegion;
           return <path key={"o"+g.code} d={g.d} fill="none" pointerEvents="none"
-                       stroke={on?"#16223F":active?"#F2913C":"rgba(70,70,90,.35)"}
-                       strokeWidth={on||active?1.6:0.4}/>;
+                       stroke={on?"#16223F":active?"#F2913C":throne?"#F5C84B":"rgba(70,70,90,.35)"}
+                       strokeWidth={on||active?1.6:throne?2.2:0.4}/>;
         })}
       </svg>
       {selGroup && (<div style={S.selBar}><b style={{color:"var(--ink)"}}>{tileLabel(selGroup)}</b>
@@ -206,6 +208,7 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
         <span><i style={{...S.boardLegendDot,border:"2px solid rgba(255,255,255,.25)"}}/>비어 있음</span>
         <span>☀️ ×2 인구감소지역 · 점수 2배</span>
         <span>🛡️ 보호 · 도전 1회 방어</span>
+        <span><i style={{...S.boardLegendDot,border:"2px solid #F5C84B"}}/>👑 왕좌 · 최초 점령 코인 +150</span>
       </div>
       {groups.map(g=>{
         const total=g.tiles.length;
@@ -232,7 +235,9 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
               const canLock = false;
               return (<div key={t.code} className={active?"tileBlink":""}
 
-                style={{...S.bTile, border:`2px solid ${active?"#F2913C":accent}`, cursor:canLock?"pointer":"default",
+                style={{...S.bTile,
+                border:`2px solid ${active?"#F2913C":(t.code===throneRegion&&!owned)?"#F5C84B":accent}`,
+                cursor:canLock?"pointer":"default",
                 background: owned? `${accent}22` : "#18233A"}}>
                 {locked && <span style={{position:"absolute",top:6,right:7,fontSize:12}}>🛡️</span>}
                 {t.code===throneRegion && <span style={{position:"absolute",top:6,left:7,fontSize:12}}>👑</span>}
