@@ -15,8 +15,8 @@ export function ResultOverlay({ trip, result, onClose }){
           <p style={{fontSize:13,color:"var(--ink-soft)",marginTop:4}}>{trip.sido} {trip.sigungu} · {trip.title}</p>
           <div style={S.tally}>
             <Row k={trip.outcome==="conquer"?"점령 점수":trip.outcome==="toll"?"방문 점수":"재방문 점수"} v={`+${result.base}`}/>
-            <Row k={`미션 인증 ${result.doneCount}건`} v={`+${result.doneCount*20}`}/>
-            {result.perfect && <Row k="퍼펙트 보너스" v="+30"/>}
+            <Row k={result.perfect ? `미션 전체 인증 ${result.doneCount}건` : `미션 인증 ${result.doneCount}건 · 미완료`}
+                 v={`+${result.bonus}`}/>
             <div style={S.tallyDiv}/>
             <Row k="총 획득" v={`+${result.total}점`} hi/>
           </div>

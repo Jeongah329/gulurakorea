@@ -214,7 +214,8 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
               /* 테두리: 내가 점령 = 금색, 다른 사람 = 그 사람 색, 나머지 = 무채색 */
               const accent = isMe?"#FFD23F":mem?mem.color:"rgba(255,255,255,.08)";
               const owned = isMe||mem;
-              const pts = t.depop? t.pt*2 : t.pt;
+              /* 실제 점령 점수와 맞춘다 — 일반 100점, 인구감소지역 200점 (App.jsx applyConquer 기준) */
+              const pts = t.depop ? 200 : 100;
               const active = t.code===activeSgg;
               const locked = protectedRegions.includes(t.code);
               const canLock = false;

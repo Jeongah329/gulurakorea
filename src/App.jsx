@@ -11,7 +11,7 @@ import { isFirebaseConfigured } from "./firebase.js";
 import { fetchMySave, publishSave, publishScore, removeMyRecord } from "./api/leaderboard.js";
 import { clearLocal, loadLocal, migrate, pickSave, saveLocal, today } from "./lib/save.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
-import { DAILY_ROLLS, DIST_STEPS, ME, PERSONAL_CARDS, ROOM_CARDS, TOLL, methodFor } from "./data/constants.js";
+import { DAILY_ROLLS, DEV_PASSCODE, DIST_STEPS, ME, PERSONAL_CARDS, ROOM_CARDS, TOLL, methodFor } from "./data/constants.js";
 import { SAMPLE_POOL } from "./data/sampleDestinations.js";
 import { SIGUNGU, boardCode, sggFromAddr } from "./lib/sigungu.js";
 import { BOARD } from "./data/board.js";
@@ -48,16 +48,22 @@ export default function App(){
   const [settingsView,setSettingsView] = useState("main");
   const [shopOpen,setShopOpen] = useState(false);
   /* 개발자 도구 — 로고 5연속 탭 또는 ?dev=1 */
-  const [devOpen,setDevOpen] = useState(()=>{
-    try{ return new URLSearchParams(window.location.search).get("dev")==="1"; }catch(e){ return false; }
-  });
+  const [devUnlocked,setDevUnlocked] = useState(false);  // 암호까지 통과했는지
+  const [devOpen,setDevOpen] = useState(false);
   const devTap = useRef({ n:0, t:0 });
+
+  /* 로고를 2초 안에 5번 누르면 암호를 묻고, 맞아야 개발자 도구가 열린다.
+     제출용 빌드에서 일반 사용자에게 노출되지 않게 하기 위한 장치다. */
   function tapLogo(){
+    if(devUnlocked){ setDevOpen(true); return; }
     const now = Date.now();
     const d = devTap.current;
     d.n = (now - d.t < 2000) ? d.n + 1 : 1;
     d.t = now;
-    if(d.n >= 5){ d.n = 0; setDevOpen(true); flash("🛠 개발자 도구"); }
+    if(d.n < 5) return;
+    d.n = 0;
+    const input = window.prompt("");
+    if(input === DEV_PASSCODE){ setDevUnlocked(true); setDevOpen(true); flash("🛠 개발자 도구"); }
   }
   const [user,setUser] = useState(null);            // 구글 로그인 사용자
   const [loginAsk,setLoginAsk] = useState(null);    // "room" | "rank" — 로그인 요청 사유
@@ -521,7 +527,8 @@ export default function App(){
     else { base=50; label="내 영토 재방문"; }
     if(throneHit) label += " · 👑 왕좌 보너스";
     else if(boosted) label += " · ⭐ 보너스 적용";
-    const bonus = doneCount*20 + (perfect?30:0);
+    /* 미션 점수는 전부 인증했을 때만 준다. 하나라도 빠지면 0점. */
+    const bonus = perfect ? doneCount*20 : 0;
     const total = base+bonus;
     setScore(s=>s+total);
     const newCards = t.missions.filter(m=>m.done).map(m=>({ title:m.n, place:`${t.sido} ${t.sigungu}`, type:m.exempt?"면제":m.method==="receipt"?"영수증":"인증샷", grad:t.grad, depop:t.depop }));
@@ -669,7 +676,7 @@ export default function App(){
             choices,chooseMode,chooseCandidate,cancelChoosing,sealFromPreview,previewShortlist}}/>)}
 
         {verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onMissionPlace={setMissionPlace} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}
-          hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard}/>)}
+          hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard} devMode={devUnlocked}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
         {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} flash={flash}/>)}
         {shopOpen && (<ShopSheet coins={coins} onBuy={buyCard} onClose={()=>setShopOpen(false)} flash={flash}/>)}

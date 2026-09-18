@@ -9,7 +9,7 @@ import { KakaoMap } from "../ui/KakaoMap.jsx";
 import { CARD_USE_MS, CardUseOverlay, Chk } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
-export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, memberById, flash, hasExemptCard, useMissionExemptCard }){
+export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, memberById, flash, hasExemptCard, useMissionExemptCard, devMode }){
   const arrivalIdx = trip.missions.findIndex(m=>m.t==="명소");
   const [step,setStep] = useState(trip.missions[arrivalIdx]?.done?1:0);
   const [scanning,setScanning] = useState(false);
@@ -40,7 +40,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
     }catch(e){ setLocMsg(String((e&&e.message)||e)); }
     setLocating(false);
   }
-  function demoArrival(){ const r=verifyGps(); onMissionDone(arrivalIdx,{gps:{...r,mode:"demo"}}); setLocMsg(""); flash(`(데모) 도착 확인 · 반경 ${r.dist}m`); setTimeout(()=>setStep(1),600); }
+  function demoArrival(){ const r=verifyGps(); onMissionDone(arrivalIdx,{gps:{...r,mode:"demo"}}); setLocMsg(""); flash(`도착 확인 · 반경 ${r.dist}m`); setTimeout(()=>setStep(1),600); }
   async function doGps(i){
     setLocating(true);
     try{
@@ -50,7 +50,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
     }catch(e){ flash(String((e&&e.message)||e)); }
     setLocating(false);
   }
-  function demoGps(i){ const r=verifyGps(); onMissionDone(i,{gps:{...r,mode:"demo"}}); flash(`(데모) 인증 완료 · 반경 ${r.dist}m`); }
+  function demoGps(i){ const r=verifyGps(); onMissionDone(i,{gps:{...r,mode:"demo"}}); flash(`인증 완료 · 반경 ${r.dist}m`); }
   function pickReceipt(i){ pendRef.current=i; fileRef.current?.click(); }
   async function onFile(e){
     const i=pendRef.current; if(i<0) return;
@@ -112,12 +112,12 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
           {!arrival.done ? (<>
             <button onClick={doArrival} disabled={locating} style={{...S.vfPrimary,opacity:locating?.6:1}}>{locating?"위치 확인 중…":"📍 현재 위치로 도착 인증"}</button>
             {locMsg && (<div style={S.locFail}><b style={{color:"var(--stamp)"}}>인증되지 않았어요</b><span>{locMsg}</span>
-              <button onClick={demoArrival} style={S.demoBtn}>(데모) 도착했다고 가정하고 진행 →</button></div>)}
-          </>) : (<div style={S.doneNote}>{arrival.gps?.mode==="demo"?"✅ (데모) 도착 확인":"✅ 도착 확인"}{arrival.gps?.dist!=null?` · 반경 ${arrival.gps.dist}m`:""}{arrival.gps?.region?` · ${arrival.gps.region.full}`:""}</div>)}
+              {devMode && <button onClick={demoArrival} style={S.demoBtn}>[개발] 도착했다고 가정하고 진행 →</button>}</div>)}
+          </>) : (<div style={S.doneNote}>"✅ 도착 확인"{arrival.gps?.dist!=null?` · 반경 ${arrival.gps.dist}m`:""}{arrival.gps?.region?` · ${arrival.gps.region.full}`:""}</div>)}
         </>)}
 
         {step===1 && (<>
-          <p style={{fontFamily:"'HiKR',sans-serif",fontSize:15,color:"var(--ink)"}}>추가 미션 <span style={{fontSize:12,fontFamily:"'MiceGothic',sans-serif",color:"var(--ink-soft)",fontWeight:600}}>· 인증당 +20점</span></p>
+          <p style={{fontFamily:"'HiKR',sans-serif",fontSize:15,color:"var(--ink)"}}>추가 미션 <span style={{fontSize:12,fontFamily:"'MiceGothic',sans-serif",color:"var(--ink-soft)",fontWeight:600}}>· 전체 인증 시 미션당 +20점</span></p>
           <p style={{fontSize:12.5,color:"var(--ink-soft)",margin:"4px 0 14px"}}>
             {others.length===0
               ? (trip.dokdo
@@ -133,7 +133,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
                   <div style={{fontSize:11.5,color:"var(--ink-soft)"}}>{m.done?(m.method==="receipt"?`${m.receipt.store} · ${m.receipt.amount.toLocaleString()}원`:`반경 ${m.gps.dist}m 인증`):(m.method==="receipt"?"영수증으로 인증":"위치로 인증")}</div></div>
                 {!m.done && <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
                   <button onClick={()=>m.method==="receipt"?pickReceipt(m.i):doGps(m.i)} disabled={locating} style={{...S.vBtn,opacity:locating&&m.method!=="receipt"?.6:1}}>{m.method==="receipt"?"영수증":(locating?"확인 중…":"위치 확인")}</button>
-                  {m.method!=="receipt" && <button onClick={()=>demoGps(m.i)} style={S.demoMini}>데모</button>}
+                  {devMode && m.method!=="receipt" && <button onClick={()=>demoGps(m.i)} style={S.demoMini}>[개발]</button>}
                   {hasExemptCard && <button disabled={!!exemptFx} onClick={()=>playExempt(m.i,m.n)} style={{...S.demoMini,opacity:exemptFx?.6:1}}>🧳 면제권</button>}
                 </div>}
               </div>
@@ -171,7 +171,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}><Chk ok={parsed.data.checks.region} t="목적지 지역 일치"/><Chk ok={parsed.data.checks.recent} t="최근 영수증"/><Chk ok={parsed.data.checks.biz} t="사업자 진위"/><Chk ok={parsed.data.checks.unique} t="중복 아님"/></div>
             {parsed.data.bizNote && <p style={{fontSize:11,color:"var(--ink-soft)",lineHeight:1.5,marginBottom:10}}>ⓘ {parsed.data.bizNote}</p>}
             <button onClick={()=>acceptReceipt(false)} style={S.acceptBtn}>이 영수증으로 인증</button>
-            {!Object.values(parsed.data.checks).every(Boolean) && <button onClick={()=>acceptReceipt(true)} style={{...S.demoBtn,marginTop:8,width:"100%"}}>(데모) 검증 무시하고 진행 →</button>}</div>)}
+            {devMode && !Object.values(parsed.data.checks).every(Boolean) && <button onClick={()=>acceptReceipt(true)} style={{...S.demoBtn,marginTop:8,width:"100%"}}>[개발] 검증 무시하고 진행 →</button>}</div>)}
         </>)}
       </div>
 

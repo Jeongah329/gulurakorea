@@ -59,6 +59,9 @@ export const CARD_PRICE = {
 /* 카드 획득 확률 — 화면에도 그대로 표시합니다 */
 export const CARD_DROP_RATE = { personal: 0.35, room: 0.18 };
 
+/* 개발자 도구 암호 — 로고를 5번 연속 누른 뒤 입력해야 열립니다 */
+export const DEV_PASSCODE = "jolee";
+
 /* 하루에 주어지는 주사위 횟수 — 매일 자정에 이 값으로 채워집니다 */
 export const DAILY_ROLLS = 5;
 
