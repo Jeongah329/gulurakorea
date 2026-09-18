@@ -43,6 +43,7 @@ export default function App(){
   const [homeSet,setHomeSet] = useState(!!boot.homeSet);   // 출발 지역을 정했는지
   const [homeCand,setHomeCand] = useState(null);  // 현재 위치로 찾은 출발 지역 후보
   const [homeCode,setHomeCode] = useState(boot.homeCode || null);  // 출발 지역으로 받은 게임판 코드
+  const [lastSido,setLastSido] = useState(boot.lastSido || null);  // 🧭 인접 지역 카드 기준 — 가장 최근에 점령한 시·도
   const [previewShortlist,setPreviewShortlist] = useState([]); // 🔍 미리 보기로 확인한 후보 3곳
   const [settingsOpen,setSettingsOpen] = useState(false);
   const [settingsView,setSettingsView] = useState("main");
@@ -101,6 +102,7 @@ export default function App(){
     if(d.throneRegion!==undefined) setThroneRegion(d.throneRegion);
     if(typeof d.rushCharges==="number") setRushCharges(d.rushCharges);
     if(typeof d.boostAdjacent==="boolean") setBoostAdjacent(d.boostAdjacent);
+    if(d.lastSido!==undefined) setLastSido(d.lastSido);
     if(typeof d.nationalActive==="boolean") setNationalActive(d.nationalActive);
     if(d.themes) setThemes(d.themes);
     if(typeof d.distIdx==="number") setDistIdx(d.distIdx);
@@ -206,7 +208,7 @@ export default function App(){
 
   /* 게임 기록 자동 저장 — 브라우저에 항상, 로그인했으면 계정에도 */
   const saveState = { score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,
-    rollsLeft,rollDay,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
+    rollsLeft,rollDay,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,lastSido,
     themes,distIdx,duration,budget };
   useEffect(()=>{
     const data = pickSave(saveState);
@@ -215,7 +217,7 @@ export default function App(){
     const t = setTimeout(()=>publishSave(user.uid, data), 2000);
     return ()=>clearTimeout(t);
   },[score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,
-     rollsLeft,rollDay,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,
+     rollsLeft,rollDay,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,lastSido,
      themes,distIdx,duration,budget,myId,user]);
 
   /* 명예의 전당 — 방과 무관하게 내 점수를 전체 순위표에 올린다 */
@@ -268,10 +270,16 @@ export default function App(){
     Object.keys(ownership).forEach(code=>{ if(ownership[code]!=="me") return; const t=BOARD.find(b=>b.code===code); if(t) set.add(t.sido); });
     return set;
   }
+  /* 🧭 인접 지역 — 가장 최근에 점령한 시·도 안에서만 뽑는다.
+     아직 점령한 곳이 없으면 내가 가진 시·도 전체를 기준으로 쓴다. */
   function filterAdjacent(pool){
+    if(lastSido){
+      const f = pool.filter(d=>d.sido===lastSido);
+      if(f.length) return f;
+    }
     const sidos = ownedSidoSet();
-    const f = pool.filter(d=>sidos.has(d.sido));
-    return f.length ? f : null;
+    const f2 = pool.filter(d=>sidos.has(d.sido));
+    return f2.length ? f2 : null;
   }
   async function drawPool(){
     const distCap = nationalActive ? 9999 : DIST_STEPS[distIdx].cap;
@@ -415,7 +423,11 @@ export default function App(){
     setCandidate(null); setDroppedCard(null);
     flash("🗺️ 조건에 맞는 지역을 모으는 중…"); setChooseMode("select"); plannedRoll(8);
   }
-  function useAdjacentCard(){ if(!takePersonalCard("adjacent")) return; setBoostAdjacent(true); flash("🧭 다음 주사위는 내 영토 인접 지역 위주로 나와요"); }
+  function useAdjacentCard(){
+    if(!takePersonalCard("adjacent")) return;
+    setBoostAdjacent(true);
+    flash(lastSido ? `🧭 적용됨 · 다음 주사위는 ${lastSido} 주변에서 뽑혀요` : "🧭 적용됨 · 다음 주사위는 내 영토 주변에서 뽑혀요");
+  }
   /* 주변 후보 목록에서 미션 장소를 바꿈 (인증 전에만 가능) */
   function setMissionPlace(idx,place){
     setActiveTrip(t=>{
@@ -438,10 +450,18 @@ export default function App(){
   }
   function openCard(card, kind){ setCardSheet({ card, kind }); }
   function closeCard(){ setCardSheet(null); }
+  const hasRoomCard = (id)=> roomCards.some(c=>c.id===id);
+  function takeRoomCard(id){
+    let ok=false;
+    setRoomCards(rc=>{ const i=rc.findIndex(c=>c.id===id); if(i<0) return rc; ok=true; return rc.filter((_,k)=>k!==i); });
+    return ok;
+  }
+  /* 🛡️ 점령 보호 — 방 카드. 지도에서 내 땅을 골라 사용한다. */
   function useProtectionCard(sgg, isMine){
+    if(!room){ flash("방에 참여 중일 때 쓸 수 있어요"); return; }
     if(ownership[sgg]!=="me"){ flash("내가 점령한 지역만 보호할 수 있어요"); return; }
     if(protectedRegions.includes(sgg)){ flash("이미 보호된 지역이에요"); return; }
-    if(!takePersonalCard("protect")) return;
+    if(!takeRoomCard("protect")){ flash("점령 보호 카드가 없어요"); return; }
     setProtectedRegions(p=>[...p,sgg]);
     if(room?.code) syncLock(room.code, sgg, true);
     flash("🛡️ 이 지역을 보호했어요 · 도전 한 번을 막아줘요");
@@ -475,6 +495,10 @@ export default function App(){
     }
     else if(id==="national"){ setNationalActive(true); flash("🗺️ 다음 여행은 전국에서 뽑혀요"); }
     else if(id==="rush"){ setRushCharges(c=>c+1); flash("🔥 여행 러시! 다음 점령 코인이 1.5배가 돼요"); }
+    else if(id==="protect"){ /* 지도에서 땅을 고른 뒤 소모하므로 여기서는 카드를 돌려준다 */
+      setRoomCards(rc=>[...rc,{id:"protect",name:"점령 보호",icon:"🛡️",desc:"내 영토를 영구히 보호 · 지도에서 내 땅 선택"}]);
+      setTab("map"); flash("🛡️ 지도에서 보호할 내 땅을 선택해 주세요");
+    }
   }
 
   const destOwner = candidate ? ownership[boardCode(candidate.sgg)] : undefined;
@@ -507,7 +531,7 @@ export default function App(){
       let coinGain = t.depop?60:30;
       if(rushCharges>0) coinGain = Math.round(coinGain*1.5);   // 🔥 여행 러시 — 코인 1.5배
       if(throneHit) coinGain += 150;                            // 👑 왕좌의 지역 — 코인 +150
-      label=`${t.sigungu} 점령`; setCoins(c=>c+coinGain);
+      label=`${t.sigungu} 점령`; setCoins(c=>c+coinGain); setLastSido(t.sido);
       if(autoBonus) takePersonalCard("bonus");
       if(rushCharges>0) setRushCharges(c=>Math.max(0,c-1));
       if(throneHit) setThroneRegion(null);
@@ -660,9 +684,11 @@ export default function App(){
         </header>
         <main style={S.body} className="app-body scroll">
           {tab==="main" && <MainScreen {...{themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify:()=>setVerifyOpen(true),finishTrip,origin,apiStatus,
-            boostAdjacent,bonusActive:hasPersonalCard("bonus"),rushCharges,nationalActive,previewShortlist}}/>}
+            boostAdjacent,bonusActive:hasPersonalCard("bonus"),rushCharges,nationalActive,previewShortlist,
+            hasExtraRoll:hasPersonalCard("extra_roll"),useExtraRollCard}}/>}
           {tab==="map" && <MapScreen {...{ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare:()=>setShareOpen(true),leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,
-            protectedRegions,throneRegion,hasProtectCard:hasPersonalCard("protect"),useProtectionCard,
+            protectedRegions,throneRegion,hasProtectCard:hasRoomCard("protect"),useProtectionCard,
+            roomCards,useRoomCard,
             rushCharges,reveals,
             myName,onNameChange:updateMyName,pendingJoinCode,clearPendingJoin:()=>setPendingJoinCode(""),online:isFirebaseConfigured,homeSet,homeCand,claimHome}}/>}
           {tab==="rank" && <RankScreen {...{ownership,members,memberById,myRegionCount,memberScore,room,trips,locks:protectedRegions,myId,myName,score,online:isFirebaseConfigured,signedIn:!!user,onNeedLogin:()=>setLoginAsk("rank")}}/>}

@@ -8,7 +8,7 @@ import { S } from "../ui/styles.js";
 
 /* ───────── 메인 ───────── */
 export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify,finishTrip,origin,apiStatus,
-  boostAdjacent,bonusActive,rushCharges}){
+  boostAdjacent,bonusActive,rushCharges,hasExtraRoll,useExtraRollCard}){
   const pending = [
     boostAdjacent && {icon:"🧭",label:"인접 지역 예약됨"},
     bonusActive && {icon:"⭐",label:"점령 보너스 예약됨"},
@@ -28,6 +28,10 @@ export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDu
       <Section title="이동거리" sub={`${DIST_STEPS[distIdx].label} · ${DIST_STEPS[distIdx].sub}`}><input type="range" min={0} max={3} value={distIdx} onChange={e=>setDistIdx(+e.target.value)} className="range" style={{width:"100%"}}/><div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>{DIST_STEPS.map((d,i)=><span key={i} style={{fontSize:11,fontWeight:i===distIdx?800:500,color:i===distIdx?"var(--stamp)":"var(--ink-soft)"}}>{d.label}</span>)}</div></Section>
       <Section title="여행 기간"><div style={{display:"flex",gap:8}}>{DURATIONS.map(d=><button key={d} onClick={()=>setDuration(d)} style={{...S.segBtn,...(duration===d?S.segOn:{})}}>{d}</button>)}</div></Section>
       <Section title="예산" sub="교통·숙박 포함 예상 경비"><div style={{display:"flex",gap:8}}>{BUDGETS.map(b=><button key={b.v} onClick={()=>setBudget(b.v)} style={{...S.segBtn,...(budget===b.v?S.segOn:{})}}>{b.label}</button>)}</div></Section>
+      {rollsLeft<=0 && hasExtraRoll && (
+        <button onClick={useExtraRollCard} style={S.extraRollBtn}>
+          🎲 주사위 하나 더 사용 · 기회 +1회
+        </button>)}
       <button onClick={rollDice} disabled={rollsLeft<=0} style={{...S.rollBtn,opacity:rollsLeft<=0?.5:1}}><span style={{fontSize:26}}>🎲</span><span>{rollsLeft>0?"주사위 굴리기":"오늘 기회 소진 · 자정에 충전"}</span><span style={S.rollCount}>남은 {rollsLeft}/{DAILY_ROLLS}</span></button>
       <p style={{textAlign:"center",fontSize:12,color:"var(--ink-soft)",marginTop:-6}}>목적지는 출발 전까지 봉투 안에 숨겨져요</p>
     </>)}

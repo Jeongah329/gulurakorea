@@ -27,10 +27,9 @@ export const PERSONAL_CARDS = [
   { id:"select",         name:"지역 선택권", icon:"🗺️", desc:"조건에 맞는 지역 직접 선택",   when:"preroll"  },
   { id:"pass",           name:"여행 패스",   icon:"🎫", desc:"이번 목적지 취소 · 주사위 기회 1회 환불", when:"trip" },
   { id:"mission_exempt", name:"미션 면제",   icon:"🧳", desc:"미션 하나 면제",             when:"mission"  },
-  { id:"protect",        name:"점령 보호",   icon:"🛡️", desc:"내 영토를 영구히 보호",        when:"map"      },
   { id:"bonus",          name:"점령 보너스", icon:"⭐", desc:"가지고 있으면 다음 점령 때 자동으로 점수 1.5배", when:"auto" },
   { id:"extra_roll",     name:"주사위 하나 더", icon:"🎲", desc:"주사위 굴리기 기회 +1회",        when:"anytime"  },
-  { id:"adjacent",       name:"인접 지역",   icon:"🧭", desc:"내 영토 주변 지역 도전",       when:"preroll"  },
+  { id:"adjacent",       name:"인접 지역",   icon:"🧭", desc:"가장 최근에 점령한 시·도 주변으로만 배정", when:"preroll"  },
 ];
 
 export const PERSONAL_CARD_WHEN_LABEL = {
@@ -47,12 +46,13 @@ export const ROOM_CARDS = [
   { id:"reveal",       name:"공개 여행지",     icon:"📢", desc:"방 사람들이 노리는 지역을 지도에 공개" },
   { id:"throne",       name:"왕좌의 지역",     icon:"👑", desc:"지정된 지역 최초 점령 시 코인 +150" },
   { id:"rush",         name:"여행 러시",       icon:"🔥", desc:"다음 점령 코인 1.5배" },
+  { id:"protect",      name:"점령 보호",       icon:"🛡️", desc:"내 영토를 영구히 보호 · 지도에서 내 땅 선택" },
 ];
 
 /* 카드 상점 가격 — 코인으로 구매합니다. 효과가 강할수록 비쌉니다. */
 export const CARD_PRICE = {
   reroll: 80, preview: 120, select: 200, pass: 100,
-  mission_exempt: 150, protect: 250, bonus: 180, adjacent: 120,
+  mission_exempt: 150, bonus: 180, adjacent: 120,
   extra_roll: 140,
 };
 

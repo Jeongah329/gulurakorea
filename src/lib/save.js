@@ -24,7 +24,7 @@ export function pickSave(s) {
     rollsLeft: s.rollsLeft, rollDay: s.rollDay,
     protectedRegions: s.protectedRegions,
     throneRegion: s.throneRegion,
-    boostAdjacent: s.boostAdjacent,
+    boostAdjacent: s.boostAdjacent, lastSido: s.lastSido,
     nationalActive: s.nationalActive,
     rushCharges: s.rushCharges,
     themes: s.themes, distIdx: s.distIdx, duration: s.duration, budget: s.budget,

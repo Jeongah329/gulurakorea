@@ -116,7 +116,7 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
           <p style={S.sheetWarn}>보호할 수 있는 내 영토가 없어요. 먼저 지역을 점령해 보세요.</p>
         ) : (<>
           <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>
-            지도에서 보호할 내 영토를 누른 뒤 🛡️ 보호 사용 버튼을 눌러 주세요.
+            방에 참여 중일 때만 쓸 수 있어요. 지도에서 보호할 내 땅을 누른 뒤 🛡️ 보호 사용 버튼을 눌러 주세요.
           </p>
           <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMap && goToMap(); }}>지도 탭으로 가기</button>
         </>);

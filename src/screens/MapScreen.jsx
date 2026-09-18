@@ -9,7 +9,7 @@ import { CARD_USE_MS, CardUseOverlay, Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
-export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard,rushCharges=0,reveals=[]}){
+export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard,rushCharges=0,reveals=[],roomCards=[],useRoomCard}){
   const [view,setView] = useState("real");
   const [joining,setJoining] = useState(()=>!!pendingJoinCode);
   const [codeInput,setCodeInput] = useState(()=>pendingJoinCode||"");
@@ -42,6 +42,17 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
       <button onClick={()=>setView("tiles")} style={{...S.viewBtn,...(view==="tiles"?S.viewOn:{})}}>타일</button>
     </div>
 
+    {room && roomCards.length>0 && (
+      <div style={S.roomCardBar}>
+        <p style={{fontSize:11.5,fontWeight:800,color:"var(--ink-soft)",margin:"0 0 8px"}}>👥 방 카드 {roomCards.length}장</p>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {roomCards.map((c,i)=>(
+            <button key={i} onClick={()=>useRoomCard(c.id)} style={S.roomCardChip}>
+              <span style={{fontSize:14}}>{c.icon}</span>{c.name}
+            </button>))}
+        </div>
+      </div>
+    )}
     {(rushCharges>0 || reveals.length>0) && (
       <div style={S.holoBox}>
         {rushCharges>0 && <p style={S.holoLine}>🔥 여행 러시 적용중 · 다음 점령 코인 1.5배</p>}

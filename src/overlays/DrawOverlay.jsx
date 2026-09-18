@@ -61,7 +61,7 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
             {phase==="choosing" && (
               <div style={{textAlign:"center",width:"100%"}} className="pop-in">
                 <p style={{color:"var(--paper)",fontSize:15,fontWeight:800,marginBottom:4}}>{chooseMode==="preview"?"🔍 후보 3곳을 확인하세요":"🗺️ 원하는 지역을 직접 선택하세요"}</p>
-                <p style={{color:"var(--paper)",opacity:.6,fontSize:12,marginBottom:16}}>{chooseMode==="preview"?"이 셋 중 한 곳이 봉투에 담겨요 · 주사위 기회는 소모되지 않아요":"고른 지역이 바로 확정돼요 · 주사위 기회는 소모되지 않아요"}</p>
+                <p style={{color:"var(--paper)",opacity:.6,fontSize:12,marginBottom:16}}>{chooseMode==="preview"?"확인만 할 수 있어요 · 이 셋 중 한 곳이 무작위로 봉투에 담겨요":"고른 지역이 바로 확정돼요 · 주사위 기회는 소모되지 않아요"}</p>
                 {appliedRow}
                 {choices.length===0 ? (<p style={{color:"var(--paper)",opacity:.7,fontSize:13}}>후보를 찾는 중…</p>) : (
                   <div style={{display:"flex",flexDirection:"column",gap:10,maxHeight:"56vh",overflowY:"auto"}} className="scroll">
@@ -89,6 +89,9 @@ export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, t
                 <div style={{display:"flex",gap:10,marginTop:18,width:"100%"}}>
                   <button onClick={rollDice} disabled={rollsLeft<=0} style={{...S.btnGhost,opacity:rollsLeft<=0?.4:1}}>다시 굴리기 · {rollsLeft}회</button>
                   <button onClick={depart} style={S.btnDepart}>출발 ✦ 봉투 열기</button></div>
+                <p style={{marginTop:10,fontSize:11.5,color:"var(--paper)",opacity:.7,textAlign:"center",lineHeight:1.6}}>
+                  카드는 봉투를 열어야 받을 수 있어요 · 다시 굴리면 사라집니다
+                </p>
                 {previewShortlist.length>0 && (
                   <p style={{marginTop:10,fontSize:11.5,color:"var(--paper)",opacity:.75,lineHeight:1.6}}>
                     🔍 미리 본 후보 · {previewShortlist.join(" / ")} 중 한 곳이에요

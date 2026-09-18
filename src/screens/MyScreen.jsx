@@ -34,8 +34,9 @@ export function MyScreen({score,coins,inventory,roomCards=[],ownedCount,trips,ca
     </div>
     <Section title="개인 카드" sub={`${inventory.length}장`}>
       <p style={S.dropRateNote}>
-        주사위를 굴릴 때마다 {Math.round(CARD_DROP_RATE.personal*100)}% 확률로 개인 카드 1장을 얻어요
-        {room ? `, 방에 있으면 여기서 다시 ${Math.round(CARD_DROP_RATE.room*100)}% 확률로 방 카드 1장을 더 받아요` : ""}.
+        카드는 봉투를 열었을 때만 나와요. {Math.round(CARD_DROP_RATE.personal*100)}% 확률로 개인 카드 1장을 얻고
+        {room ? `, 방에 있으면 여기서 다시 ${Math.round(CARD_DROP_RATE.room*100)}% 확률로 방 카드 1장을 더 받아요` : "요"}.
+        봉투를 열지 않고 다시 굴리면 그 카드는 사라집니다.
       </p>
       {(bonusActive || rushCharges>0 || boostAdjacent || nationalActive) && (
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
