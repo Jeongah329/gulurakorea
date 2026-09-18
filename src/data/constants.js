@@ -51,9 +51,13 @@ export const ROOM_CARDS = [
 
 /* 카드 상점 가격 — 코인으로 구매합니다. 효과가 강할수록 비쌉니다. */
 export const CARD_PRICE = {
+  /* 개인 카드 */
   reroll: 80, preview: 120, select: 200, pass: 100,
   mission_exempt: 150, bonus: 180, adjacent: 120,
   extra_roll: 140,
+  /* 방 카드 — 방에 참여 중일 때만 살 수 있습니다 */
+  room_extra_roll: 200, chaos: 220, national: 180,
+  reveal: 160, throne: 300, rush: 260, protect: 280,
 };
 
 /* 카드 획득 확률 — 화면에도 그대로 표시합니다 */

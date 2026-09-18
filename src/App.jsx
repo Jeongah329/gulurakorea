@@ -611,10 +611,13 @@ export default function App(){
   function updateMyName(n){ setMyNameState(n); persistMyName(n); }
 
   /* 카드 상점 — 코인으로 개인 카드를 산다 */
-  function buyCard(card, price){
+  function buyCard(card, price, kind){
     if(coins < price){ flash("코인이 모자라요"); return; }
+    if(kind==="room" && !room){ flash("방에 참여 중일 때 살 수 있어요"); return; }
     setCoins(c=>c-price);
-    setInventory(inv=>[...inv, { id:card.id, name:card.name, icon:card.icon, desc:card.desc, when:card.when }]);
+    const item = { id:card.id, name:card.name, icon:card.icon, desc:card.desc, when:card.when };
+    if(kind==="room") setRoomCards(rc=>[...rc, item]);
+    else setInventory(inv=>[...inv, item]);
     flash(`${card.icon} ${card.name}을(를) 샀어요`);
   }
 
@@ -714,7 +717,7 @@ export default function App(){
           hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard} devMode={devUnlocked}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
         {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} flash={flash}/>)}
-        {shopOpen && (<ShopSheet coins={coins} onBuy={buyCard} onClose={()=>setShopOpen(false)} flash={flash}/>)}
+        {shopOpen && (<ShopSheet coins={coins} onBuy={buyCard} inRoom={!!room} onClose={()=>setShopOpen(false)} flash={flash}/>)}
         {settingsOpen && (<SettingsSheet
           key={settingsView} initialView={settingsView}
           onClose={()=>setSettingsOpen(false)}

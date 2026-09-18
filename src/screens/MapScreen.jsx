@@ -11,6 +11,7 @@ import { S } from "../ui/styles.js";
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
 export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard,rushCharges=0,reveals=[],roomCards=[],useRoomCard}){
   const [view,setView] = useState("real");
+  const [roomCardOpen,setRoomCardOpen] = useState(false);   // 방 카드 목록 접기/펴기
   const [joining,setJoining] = useState(()=>!!pendingJoinCode);
   const [codeInput,setCodeInput] = useState(()=>pendingJoinCode||"");
   const [busy,setBusy] = useState(false);
@@ -44,13 +45,24 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
 
     {room && roomCards.length>0 && (
       <div style={S.roomCardBar}>
-        <p style={{fontSize:11.5,fontWeight:800,color:"var(--ink-soft)",margin:"0 0 8px"}}>👥 방 카드 {roomCards.length}장</p>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {roomCards.map((c,i)=>(
-            <button key={i} onClick={()=>useRoomCard(c.id)} style={S.roomCardChip}>
-              <span style={{fontSize:14}}>{c.icon}</span>{c.name}
-            </button>))}
-        </div>
+        <button onClick={()=>setRoomCardOpen(v=>!v)} style={S.roomCardHead}>
+          <span style={{fontSize:12,fontWeight:800,color:"var(--ink)"}}>👥 방 카드</span>
+          <span style={{fontSize:11.5,color:"var(--ink-soft)"}}>{roomCards.length}장</span>
+          <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink-soft)"}}>{roomCardOpen?"▲":"▼"}</span>
+        </button>
+        {roomCardOpen && (
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:9}}>
+            {roomCards.map((c,i)=>(
+              <button key={i} onClick={()=>useRoomCard(c.id)} style={S.roomCardRow}>
+                <span style={{fontSize:18,width:26,textAlign:"center"}}>{c.icon}</span>
+                <span style={{flex:1,textAlign:"left",minWidth:0}}>
+                  <b style={{fontSize:12.5,fontWeight:800,color:"var(--ink)",display:"block"}}>{c.name}</b>
+                  <span style={{fontSize:11,color:"var(--ink-soft)"}}>{c.desc}</span>
+                </span>
+                <span style={S.roomCardUse}>사용</span>
+              </button>))}
+          </div>
+        )}
       </div>
     )}
     {(rushCharges>0 || reveals.length>0) && (
@@ -201,7 +213,7 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
           <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:22}}>📖</span><span style={S.boardTitle}>우리 게임판</span></div>
           <p style={S.boardSub}>{names} · {members.length}명 {room?"경쟁 중":"플레이"}</p>
         </div>
-        {room && <span style={S.livePill}><span style={S.liveDot}/> LIVE · 시즌 1</span>}
+        {room && <span style={S.livePill}><span style={S.liveDot}/> {room.code}</span>}
       </div>
       <div style={S.boardLegend}>
         <span><i style={{...S.boardLegendDot,border:"2px solid #FFD23F"}}/>내가 점령</span>
