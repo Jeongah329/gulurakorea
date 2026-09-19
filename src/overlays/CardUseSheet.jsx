@@ -37,6 +37,7 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
   }
 
   let body;
+  let auto = null;   // 확인 없이 바로 적용할 카드
 
   /* 쓸 수 없는 방 카드는 사용 버튼 대신 이유를 보여준다 */
   const roomBlock = (()=>{
@@ -48,13 +49,14 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
     return null;
   })();
 
+  /* 바로 쓸 수 있는 방 카드는 확인 창을 거치지 않고 누르는 즉시 적용한다.
+     설명이 필요한 경우(방 밖이거나 대상이 없을 때)에만 이유를 띄운다. */
+  const autoRoom = kind==="room" && inRoom && !roomBlock;
+
   if(kind==="room" && roomBlock){
     body = <p style={S.sheetWarn}>{roomBlock}</p>;
   } else if(kind==="room"){
-    body = inRoom ? (<>
-      <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-      <button style={S.roomPrimary} onClick={()=>playUse(()=>actions.room(card.id), `${card.name} 사용 중…`)}>지금 사용하기</button>
-    </>) : (<>
+    body = inRoom ? null : (<>
       <p style={S.sheetWarn}>방 카드는 방에 참여 중일 때만 쓸 수 있어요. 지도 탭에서 방을 만들거나 코드로 참여해 주세요.</p>
       <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMap && goToMap(); }}>지도 탭으로 가기</button>
     </>);
@@ -62,10 +64,8 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
     switch(card.id){
       case "reroll": {
         const usable = !!candidate && phase==="revealed";
-        body = usable ? (<>
-          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-          <button style={S.roomPrimary} onClick={()=>playUse(actions.reroll, "카드를 사용했어요")}>지금 사용하기</button>
-        </>) : (<>
+        if(usable) auto = { fn: actions.reroll, msg: "지역을 다시 배정하는 중…" };
+        body = usable ? null : (<>
           <p style={S.sheetWarn}>봉투를 연 뒤, 목적지가 공개된 화면에서 사용할 수 있어요.</p>
           <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMain(); }}>메인 탭으로 가기</button>
         </>);
@@ -74,10 +74,8 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
       case "pass": {
         const started = activeTrip && activeTrip.missions.some(m=>m.done);
         const usable = !started && (!!candidate || !!activeTrip);
-        body = usable ? (<>
-          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-          <button style={S.roomPrimary} onClick={()=>playUse(actions.pass, "이번 목적지를 취소했어요")}>지금 사용하기</button>
-        </>) : (
+        if(usable) auto = { fn: actions.pass, msg: "이번 목적지를 취소하는 중…" };
+        body = usable ? null : (
           <p style={S.sheetWarn}>
             {started ? "이미 인증을 시작한 여행은 포기할 수 없어요."
                      : "취소할 목적지가 있을 때 사용할 수 있어요."}
@@ -97,18 +95,14 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
         break;
       }
       case "extra_roll": {
-        body = (<>
-          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-          <button style={S.roomPrimary} onClick={()=>playUse(actions.extra_roll, "주사위 기회가 1회 늘었어요")}>지금 사용하기</button>
-        </>);
+        auto = { fn: actions.extra_roll, msg: "주사위 기회를 늘리는 중…" };
+        body = null;
         break;
       }
       case "adjacent": {
         const fn = actions.adjacent;
-        body = (<>
-          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-          <button style={S.roomPrimary} onClick={()=>playUse(fn, "다음 주사위/점령에 적용돼요")}>지금 사용하기</button>
-        </>);
+        auto = { fn, msg: "다음 주사위에 적용하는 중…" };
+        body = null;
         break;
       }
       case "mission_exempt": {
@@ -154,9 +148,20 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
     }
   }
 
-  return using ? (
+  /* 즉시 적용 대상이면 시트가 열리는 순간 바로 실행한다 */
+  useEffect(()=>{
+    if(autoRoom) playUse(()=>actions.room(card.id), `${card.name} 사용 중…`);
+    else if(auto) playUse(auto.fn, auto.msg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  /* 즉시 적용 카드는 첫 화면부터 연출을 보여준다.
+     빈 팝업이 한 순간 스치는 것을 막기 위해서다. */
+  const pending = !done && !using && (autoRoom || auto);
+
+  return (using || pending) ? (
     // 팝업 시트 대신 화면 정중앙에 카드 애니메이션만 표시
-    <CardUseOverlay icon={card.icon} label={using.label}/>
+    <CardUseOverlay icon={card.icon} label={using ? using.label : (auto ? auto.msg : `${card.name} 사용 중…`)}/>
   ) : (
     <div className="modal-scrim" style={S.modalScrim} onClick={closeAll}>
       <div style={S.sheet} onClick={e=>e.stopPropagation()} className="sheet-in scroll">

@@ -96,7 +96,7 @@ export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, member
         </div>
       </div>
 
-      <div style={S.vfBody} className="scroll">
+      <div style={S.vfBody} className="scroll app-scroll">
         {trip.outcome==="toll" && step<2 && (
           <div style={{...S.ownBanner,background:"rgba(242,145,60,.12)",border:"1px solid rgba(242,145,60,.5)",marginBottom:14}}>
             <span style={{fontSize:18}}>{trip.locked?"🔒":"⚔️"}</span><div style={{flex:1}}><b style={{color:"var(--stamp)",fontSize:13}}>{friend?.name}님의 영토 · 도전</b><div style={{fontSize:12,color:"var(--ink-soft)"}}>

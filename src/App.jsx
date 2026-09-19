@@ -39,7 +39,9 @@ export default function App(){
   const boot = (()=>{ try{ return loadLocal(getMyId()) || {}; }catch(e){ return {}; } })();
   const [tab,setTab] = useState("main");
   const [members,setMembers] = useState([ME]);
-  const [room,setRoom] = useState(null);
+  /* 새로고침해도 참여 중이던 방으로 돌아간다.
+     방을 떠난 적이 없으면 서버에도 내 자리가 남아 있어 그대로 이어진다. */
+  const [room,setRoom] = useState(boot.roomCode ? { code:boot.roomCode } : null);
   const [ownership,setOwnership] = useState(boot.ownership || {}); // 게임판 코드 -> memberId
   const [homeSet,setHomeSet] = useState(!!boot.homeSet);   // 출발 지역을 정했는지
   const [homeCand,setHomeCand] = useState(null);  // 현재 위치로 찾은 출발 지역 후보
@@ -78,7 +80,8 @@ export default function App(){
   useEffect(()=>{
     const onWheel = (e)=>{
       if(document.body.classList.contains("modal-open")) return;
-      const body = document.querySelector(".app-body");
+      /* 인증·결과 화면이 떠 있으면 그 화면의 스크롤 영역을 우선한다 */
+      const body = document.querySelector(".app-scroll") || document.querySelector(".app-body");
       if(!body) return;
       if(body.scrollHeight <= body.clientHeight) return;   // 스크롤할 내용이 없으면 둔다
       if(body.contains(e.target)) return;                  // 본문 안이면 브라우저에 맡긴다
@@ -112,6 +115,10 @@ export default function App(){
     if(!getMyName() && u.name){ setMyNameState(u.name.slice(0,10)); persistMyName(u.name.slice(0,10)); }
     /* 익명으로 쌓아둔 기록을 계정으로 옮기고, 계정에 남아 있던 기록이 있으면 불러온다 */
     migrate(anonId, u.uid);
+    /* 로그인 전에 익명으로 올라가 있던 순위표 기록을 지운다.
+       같은 사람이 이름만 다른 채로 순위표에 두 번 뜨는 것을 막기 위해서다.
+       기록 자체는 바로 위에서 계정으로 옮겼으므로 사라지지 않는다. */
+    if(anonId && anonId !== u.uid) removeMyRecord(anonId);
     let data = loadLocal(u.uid);
     if(!data){ data = await fetchMySave(u.uid); if(data) saveLocal(u.uid, data); }
     if(data) applySave(data);
@@ -128,6 +135,7 @@ export default function App(){
     else if(typeof d.rollsLeft==="number") setRollsLeft(d.rollsLeft);
     if(d.inventory) setInventory(d.inventory);
     if(d.roomCards) setRoomCards(d.roomCards);
+    if(d.roomCode && !room) setRoom({ code:d.roomCode });
     if(d.cards) setCards(d.cards);
     if(d.trips) setTrips(d.trips);
     if(d.protectedRegions) setProtectedRegions(d.protectedRegions);
@@ -302,7 +310,7 @@ export default function App(){
   },[room?.code, myId, activeTrip, candidate, phase]);
 
   /* 게임 기록 자동 저장 — 브라우저에 항상, 로그인했으면 계정에도 */
-  const saveState = { score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,
+  const saveState = { score,coins,ownership,homeSet,homeCode,inventory,roomCards,cards,trips,roomCode:room?.code||null,
     rollsLeft,rollDay,protectedRegions,throneRegion,boostAdjacent,nationalActive,rushCharges,lastSido,
     themes,distIdx,duration,budget };
   useEffect(()=>{
@@ -851,7 +859,7 @@ export default function App(){
             inventory,openCard,
             choices,chooseMode,chooseCandidate,cancelChoosing,sealFromPreview,previewShortlist}}/>)}
 
-        {verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onMissionPlace={setMissionPlace} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}
+        {tab==="main" && verifyOpen && activeTrip && (<VerifyFlow trip={activeTrip} onMissionDone={setMissionDone} onMissionPlace={setMissionPlace} onDone={()=>setVerifyOpen(false)} memberById={memberById} flash={flash}
           hasExemptCard={hasPersonalCard("mission_exempt")} useMissionExemptCard={useMissionExemptCard} devMode={devUnlocked}/>)}
         {result && activeTrip && (<ResultOverlay trip={activeTrip} result={result} onClose={closeResult}/>)}
         {shareOpen && (<ShareModal room={room} onClose={()=>setShareOpen(false)} flash={flash}/>)}

@@ -20,6 +20,7 @@ export function pickSave(s) {
     ownership: s.ownership,
     homeSet: s.homeSet, homeCode: s.homeCode,
     inventory: s.inventory, roomCards: s.roomCards,
+    roomCode: s.roomCode,
     cards: s.cards, trips: s.trips,
     rollsLeft: s.rollsLeft, rollDay: s.rollDay,
     protectedRegions: s.protectedRegions,
