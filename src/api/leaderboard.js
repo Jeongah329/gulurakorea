@@ -94,3 +94,24 @@ export async function publishSave(myId, save) {
   try { await setDoc(doc(db, PLAYERS, String(myId)), { save, updatedAt: serverTimestamp() }, { merge: true }); }
   catch (e) { console.warn("[leaderboard] 기록 저장 실패", e); }
 }
+
+/**
+ * 닉네임이 이미 다른 사람이 쓰고 있는지 확인한다.
+ *
+ * 순위표(players)는 누구나 읽을 수 있어 별도 저장소나 보안 규칙 없이 확인할 수 있다.
+ * 대소문자와 앞뒤 공백만 다른 이름도 같은 이름으로 본다.
+ */
+export async function isNameTaken(name, myId) {
+  if (!db) return false;
+  const want = String(name || "").trim().toLowerCase();
+  if (!want) return false;
+  try {
+    const snap = await getDocs(query(collection(db, PLAYERS), limit(500)));
+    return snap.docs.some(
+      (d) => d.id !== String(myId) && String(d.data().name || "").trim().toLowerCase() === want,
+    );
+  } catch (e) {
+    console.warn("[leaderboard] 닉네임 확인 실패", e);
+    return false;          // 확인하지 못하면 막지 않는다
+  }
+}

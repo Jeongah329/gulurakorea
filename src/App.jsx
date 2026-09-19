@@ -8,7 +8,7 @@ import {
   leaveRoomOnline, setMyName as persistMyName, subscribeRoom, syncLock, syncOwnership, syncScore,
 } from "./api/rooms.js";
 import { isFirebaseConfigured } from "./firebase.js";
-import { fetchMySave, publishSave, publishScore, removeMyRecord } from "./api/leaderboard.js";
+import { fetchMySave, isNameTaken, publishSave, publishScore, removeMyRecord } from "./api/leaderboard.js";
 import { broadcastEvent, pushMyTiles, syncAim } from "./api/roomAim.js";
 import { clearLocal, loadLocal, migrate, pickSave, saveLocal, today } from "./lib/save.js";
 import { HOME_ORIGIN, enrichDestination, fetchDestinations } from "./api/tourApi.js";
@@ -112,7 +112,15 @@ export default function App(){
       setRoom(null); setMembers([ME]); setReveals([]);
     }
     if(!u) return;
-    if(!getMyName() && u.name){ setMyNameState(u.name.slice(0,10)); persistMyName(u.name.slice(0,10)); }
+    /* 구글 이름을 기본 닉네임으로 쓰되, 이미 쓰는 사람이 있으면 숫자를 붙여 겹치지 않게 한다 */
+    if(!getMyName() && u.name){
+      const base = u.name.slice(0,10);
+      let pick = base;
+      for(let i=2; i<=20 && await isNameTaken(pick, u.uid); i++){
+        pick = base.slice(0, 10 - String(i).length) + i;
+      }
+      setMyNameState(pick); persistMyName(pick);
+    }
     /* 익명으로 쌓아둔 기록을 계정으로 옮기고, 계정에 남아 있던 기록이 있으면 불러온다 */
     migrate(anonId, u.uid);
     /* 로그인 전에 익명으로 올라가 있던 순위표 기록을 지운다.
@@ -867,7 +875,7 @@ export default function App(){
         {settingsOpen && (<SettingsSheet
           key={settingsView} initialView={settingsView}
           onClose={()=>setSettingsOpen(false)}
-          myName={myName} onNameChange={updateMyName}
+          myName={myName} onNameChange={updateMyName} myId={myId}
           avatar={avatar} onAvatarChange={updateAvatar}
           user={user} onSignIn={()=>setLoginAsk("room")} onSignOut={async()=>{ await signOutUser(); flash("로그아웃했어요"); }}
           room={room} leaveRoom={leaveRoom}

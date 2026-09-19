@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import CFG from "../config.js";
 import { APP_VERSION } from "../data/constants.js";
+import { isNameTaken } from "../api/leaderboard.js";
 import { S } from "../ui/styles.js";
 
 function Group({ title, children }) {
@@ -33,13 +34,14 @@ function Row({ label, hint, right, onClick, danger }) {
 }
 
 export function SettingsSheet({
-  onClose, myName, onNameChange, avatar, onAvatarChange, room, leaveRoom,
+  onClose, myName, onNameChange, myId, avatar, onAvatarChange, room, leaveRoom,
   homeLabel, canChangeHome, onChangeHome,
   resetDemo, onDeleteAll, flash, initialView, user, onSignIn, onSignOut,
 }) {
   const [view, setView] = useState(initialView || "main");   // main | account | name | doc | quit
   const [doc, setDoc] = useState(null);
   const [name, setName] = useState(myName || "");
+  const [nameBusy, setNameBusy] = useState(false);
   const [confirm, setConfirm] = useState(null); // 'reset' | 'quit'
   const [copyFail, setCopyFail] = useState(false);   // 복사가 막힌 환경에서 직접 고르도록
   const [reason, setReason] = useState("");     // 탈퇴 사유
@@ -236,12 +238,25 @@ React · Vite · Firebase Firestore`,
           <input value={name} maxLength={10} placeholder="닉네임 입력 (최대 10자)"
             onChange={e => setName(e.target.value.slice(0, 10))}
             style={{ ...S.codeInput, width: "100%", boxSizing: "border-box", marginBottom: 12 }} />
+          <p style={{ fontSize: 11.5, color: "var(--ink-soft)", lineHeight: 1.6, margin: "0 0 12px 2px" }}>
+            다른 여행자가 쓰고 있는 닉네임은 쓸 수 없어요.
+          </p>
           <button
-            onClick={() => {
-              if (!name.trim()) { flash("닉네임을 입력해 주세요"); return; }
-              onNameChange(name.trim()); flash("닉네임을 바꿨어요"); setView(initialView === "account" ? "account" : "main");
+            disabled={nameBusy}
+            onClick={async () => {
+              const v = name.trim();
+              if (!v) { flash("닉네임을 입력해 주세요"); return; }
+              if (v === (myName || "")) { setView(initialView === "account" ? "account" : "main"); return; }
+              setNameBusy(true);
+              const taken = await isNameTaken(v, myId);
+              setNameBusy(false);
+              if (taken) { flash("이미 쓰고 있는 닉네임이에요 · 다른 이름을 골라 주세요"); return; }
+              onNameChange(v); flash("닉네임을 바꿨어요");
+              setView(initialView === "account" ? "account" : "main");
             }}
-            style={{ ...S.roomPrimary, width: "100%" }}>저장</button>
+            style={{ ...S.roomPrimary, width: "100%", opacity: nameBusy ? .6 : 1 }}>
+            {nameBusy ? "확인 중…" : "저장"}
+          </button>
         </div>
       </div>
     );
