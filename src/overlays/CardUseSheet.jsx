@@ -10,7 +10,7 @@ import { S } from "../ui/styles.js";
 
 const USE_MS = CARD_USE_MS; // 카드 뒤집힘 애니메이션 재생 시간과 맞춘 지연
 
-export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip, ownedRegions=[], inRoom, actions, goToMain, goToMap, goToMission }){
+export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip, ownedRegions=[], inRoom, roomMates=[], actions, goToMain, goToMap, goToMission }){
   const [done,setDone] = useState(null);
   const [using,setUsing] = useState(null); // { label } — 재생 중인 사용 연출
   const timerRef = useRef(null);
@@ -38,7 +38,19 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
 
   let body;
 
-  if(kind==="room"){
+  /* 쓸 수 없는 방 카드는 사용 버튼 대신 이유를 보여준다 */
+  const roomBlock = (()=>{
+    if(kind!=="room" || !inRoom) return null;
+    if(card.id==="reveal"){
+      if(!roomMates.length) return "방에 다른 여행자가 없어 쓸 수 없어요. 친구가 들어오면 사용해 주세요.";
+      if(!roomMates.some(m=>m.aim)) return "아직 목적지를 정한 여행자가 없어요. 친구가 봉투를 연 뒤에 사용해 주세요.";
+    }
+    return null;
+  })();
+
+  if(kind==="room" && roomBlock){
+    body = <p style={S.sheetWarn}>{roomBlock}</p>;
+  } else if(kind==="room"){
     body = inRoom ? (<>
       <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
       <button style={S.roomPrimary} onClick={()=>playUse(()=>actions.room(card.id), `${card.name} 사용 중…`)}>지금 사용하기</button>

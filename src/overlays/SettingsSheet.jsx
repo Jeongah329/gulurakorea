@@ -129,9 +129,13 @@ export function SettingsSheet({
 
   function openContact() {
     if (!CFG.contactFormUrl) { flash("문의 폼 주소가 아직 등록되지 않았어요"); return; }
-    /* 새 창이 차단되면 현재 창에서 연다 */
-    const w = window.open(CFG.contactFormUrl, "_blank", "noopener");
-    if (!w) window.location.href = CFG.contactFormUrl;
+    /* 새 창으로만 연다.
+       noopener 를 주면 창이 정상적으로 열려도 window.open 이 null 을 돌려주는데,
+       그걸 실패로 보고 현재 창까지 이동시키는 바람에 창이 두 개 열렸다.
+       열렸는지는 확인하지 않고, 차단된 경우에만 안내한다. */
+    const w = window.open(CFG.contactFormUrl, "_blank");
+    if (w) { try { w.opener = null; } catch (e) {} }
+    else flash("새 창이 차단됐어요 · 브라우저에서 팝업을 허용해 주세요");
   }
 
   const DOCS = {

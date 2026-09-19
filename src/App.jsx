@@ -578,6 +578,17 @@ export default function App(){
       setPendingTab("map");
       return "🛡️ 지도에서 보호할 내 땅을 선택해 주세요";
     }
+    /* 📢 공개 여행지는 보여줄 상대가 있어야 의미가 있다.
+       대상이 없으면 카드를 쓰지 않고 돌려준다. */
+    if(id==="reveal"){
+      const others = members.filter(m=>m.id!=="me");
+      if(!others.length) return "📢 방에 다른 여행자가 없어 쓸 수 없어요 · 카드는 그대로 있어요";
+      if(!others.some(m=>m.aim)) return "📢 아직 목적지를 정한 여행자가 없어요 · 카드는 그대로 있어요";
+    }
+    /* 👑 왕좌는 아무도 갖지 않은 칸이 있어야 지정할 수 있다 */
+    if(id==="throne" && !BOARD.some(t=>!ownership[t.code])){
+      return "👑 아직 비어 있는 지역이 없어 쓸 수 없어요 · 카드는 그대로 있어요";
+    }
     let ok=false; setRoomCards(rc=>{ const i=rc.findIndex(c=>c.id===id); if(i<0) return rc; ok=true; return rc.filter((_,k)=>k!==i); });
     if(!ok) return "이 카드를 가지고 있지 않아요";
     let msg = "카드를 사용했어요";
@@ -597,19 +608,14 @@ export default function App(){
       /* 방 사람들이 실제로 올려 둔 목적지만 보여준다. 꾸며내지 않는다. */
       const list = members.filter(m=>m.id!=="me" && m.aim).map(m=>({ who:m.name, where:m.aim }));
       setReveals(list);
-      if(!list.length){
-        const others = members.filter(m=>m.id!=="me").length;
-        msg = others ? "📢 아직 목적지를 정한 여행자가 없어요" : "📢 방에 다른 여행자가 없어요";
-      } else {
-        msg = `📢 ${list.length===1?`${list[0].who}님의 목적지를`:`여행자 ${list.length}명의 목적지를`} 지도에 표시했어요`;
-      }
+      setPendingTab("map");
+      msg = `📢 ${list.length===1?`${list[0].who}님의 목적지를`:`여행자 ${list.length}명의 목적지를`} 지도에 표시했어요`;
     }
     else if(id==="throne"){
       /* 아무도 점령하지 않은 칸 중에서 고른다. 이미 주인이 있으면 최초 점령이 성립하지 않는다. */
       const cands = BOARD.filter(t=>!ownership[t.code]);
       const t = cands[Math.floor(Math.random()*cands.length)];
       if(t){ setThroneRegion(t.code); setPendingTab("map"); broadcastEvent(room.code, myId, "throne", { code:t.code, where:`${t.sido} ${t.name}` }); msg = `👑 ${t.sido} ${t.name}이(가) 왕좌의 지역이 됐어요 · 최초 점령 코인 +150`; }
-      else msg = "👑 왕좌로 삼을 지역을 찾지 못했어요";
     }
     else if(id==="national"){ setNationalActive(true); broadcastEvent(room.code, myId, "national"); msg = "🗺️ 방 전체가 다음 여행을 전국에서 뽑아요"; }
     else if(id==="rush"){ setRushCharges(c=>c+1); broadcastEvent(room.code, myId, "rush"); msg = "🔥 방 전체에 여행 러시 적용 · 다음 점령 코인 1.5배"; }
@@ -860,7 +866,7 @@ export default function App(){
           homeLabel={homeCode ? (BOARD.find(b=>b.code===homeCode)?.name || "설정됨") : null}
           canChangeHome={!room} onChangeHome={changeHome}
           resetDemo={resetDemo} onDeleteAll={deleteAll} flash={flash}/>)}
-        {cardSheet && (<CardUseSheet card={cardSheet.card} kind={cardSheet.kind} onClose={closeCard} inRoom={!!room}
+        {cardSheet && (<CardUseSheet card={cardSheet.card} kind={cardSheet.kind} onClose={closeCard} inRoom={!!room} roomMates={members.filter(m=>m.id!=="me")}
           phase={phase} candidate={candidate} activeTrip={activeTrip} ownedRegions={ownedProtectableRegions()}
           goToMain={()=>setTab("main")} goToMap={()=>setTab("map")}
           goToMission={()=>{ setTab("main"); setVerifyOpen(true); }}
