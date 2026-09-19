@@ -166,7 +166,7 @@ export function loadKakaoShare() {
 /* 초대 링크: 현재 배포 주소 + ?join=코드 */
 export function inviteLink(code) {
   /* 항상 config.siteUrl 기준으로 만든다.
-     현재 페이지 주소를 쓰면 미리보기 파일이나 예전에 만들어진 임시 Netlify 주소에서
+     현재 페이지 주소를 쓰면 미리보기 파일이나 임시 배포 주소에서
      공유했을 때 친구가 못 여는 링크가 만들어진다. */
   const base = String(CFG.siteUrl || "").replace(/\/+$/, "");
   try {

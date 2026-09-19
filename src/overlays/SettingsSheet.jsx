@@ -55,14 +55,25 @@ export function SettingsSheet({
     if (!/^image\//.test(f.type)) { flash("이미지 파일만 올릴 수 있어요"); return; }
     const img = new Image();
     const reader = new FileReader();
-    reader.onload = () => { img.onload = () => {
-      const S2 = 256, c = document.createElement("canvas");
-      c.width = S2; c.height = S2;
-      const side = Math.min(img.width, img.height);
-      c.getContext("2d").drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S2, S2);
-      onAvatarChange(c.toDataURL("image/jpeg", 0.82));
-      flash("프로필 사진을 바꿨어요");
-    }; img.src = reader.result; };
+    reader.onerror = () => flash("사진을 읽지 못했어요");
+    reader.onload = () => {
+      img.onerror = () => flash("이미지를 열지 못했어요");
+      img.onload = () => {
+        try {
+          const S2 = 256, c = document.createElement("canvas");
+          c.width = S2; c.height = S2;
+          const side = Math.min(img.width, img.height);
+          const ctx = c.getContext("2d");
+          if (!ctx) { flash("이 브라우저에서는 사진을 처리할 수 없어요"); return; }
+          ctx.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S2, S2);
+          onAvatarChange(c.toDataURL("image/jpeg", 0.82));
+          flash("프로필 사진을 바꿨어요");
+        } catch (err) {
+          flash("사진을 저장하지 못했어요");
+        }
+      };
+      img.src = reader.result;
+    };
     reader.readAsDataURL(f);
   }
 
@@ -118,7 +129,9 @@ export function SettingsSheet({
 
   function openContact() {
     if (!CFG.contactFormUrl) { flash("문의 폼 주소가 아직 등록되지 않았어요"); return; }
-    window.open(CFG.contactFormUrl, "_blank", "noopener");
+    /* 새 창이 차단되면 현재 창에서 연다 */
+    const w = window.open(CFG.contactFormUrl, "_blank", "noopener");
+    if (!w) window.location.href = CFG.contactFormUrl;
   }
 
   const DOCS = {
@@ -168,15 +181,25 @@ export function SettingsSheet({
     credit: {
       title: "만든 사람",
       body: `굴러라 대한민국
+주사위로 떠나는 랜덤 국내여행
 2026 한국관광콘텐츠랩 활용 공모전 출품작
 
-데이터 출처
-· 한국관광공사 TourAPI 4.0 (KorService2) — 관광지 정보와 대표 이미지
-· 행정안전부 — 인구감소지역 지정 자료
-· 카카오 — 지도, 길찾기, 행정구역 대조, 공유
+공공데이터
+· 한국관광공사 국문 관광정보 서비스(TourAPI 4.0)
+  지역 기반 관광정보, 위치 기반 관광정보, 공통정보 조회를 사용해
+  목적지 후보와 주변 미션 장소, 소개글과 대표 이미지를 가져옵니다.
+· 행정안전부 인구감소지역 지정 자료
+  황금 타일(2배 점수) 판정에 사용합니다.
+· 전국 시·군·구 행정구역 경계 데이터
+  땅따먹기 지도를 그리는 데 사용합니다.
 
-사용 기술
-React · Vite · Firebase Firestore · Netlify`,
+연동 서비스
+· 카카오맵 — 지도 표시, 길찾기, 행정구역 대조
+· 카카오톡 공유 — 친구 초대 링크 전송
+· Google Firebase — 온라인 방, 명예의 전당, 기록 저장, 로그인
+
+만든 기술
+React · Vite · Firebase Firestore`,
     },
   };
 
@@ -289,8 +312,9 @@ React · Vite · Firebase Firestore · Netlify`,
   if (view === "account") {
     return (
       <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
-        <input ref={fileRef} type="file" accept="image/*" onChange={pickAvatar} style={{ display: "none" }} />
         <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
+          <input ref={fileRef} type="file" accept="image/*" onChange={pickAvatar}
+            onClick={e => e.stopPropagation()} style={{ display: "none" }} />
           <div style={S.setHead}>
             <button onClick={() => setView("main")} style={S.setBack}>‹ 뒤로</button>
             <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>프로필 수정</b>
@@ -320,7 +344,8 @@ React · Vite · Firebase Firestore · Netlify`,
   return (
     <div className="modal-scrim" style={S.modalScrim} onClick={onClose}>
       <div style={S.sheet} onClick={e => e.stopPropagation()} className="sheet-in scroll">
-        <input ref={fileRef} type="file" accept="image/*" onChange={pickAvatar} style={{ display: "none" }} />
+        <input ref={fileRef} type="file" accept="image/*" onChange={pickAvatar}
+          onClick={e => e.stopPropagation()} style={{ display: "none" }} />
         <div style={S.setHead}>
           <span style={{ minWidth: 52 }} />
           <b style={{ fontSize: 15, color: "var(--ink)", whiteSpace: "nowrap" }}>설정</b>
@@ -366,7 +391,7 @@ React · Vite · Firebase Firestore · Netlify`,
         </Group>
 
         <Group title="지원">
-          <Row label="문의하기" hint="버그 제보나 의견을 남겨주세요" onClick={openContact} />
+          <Row label="문의하기" hint="버그 제보나 의견을 남겨주세요 · 구글 폼으로 연결돼요" right="열기" onClick={openContact} />
           <Row label="앱 공유하기" hint={SHARE_URL} right="복사" onClick={copyLink} />
           {copyFail && (
             <div style={S.copyFallback}>

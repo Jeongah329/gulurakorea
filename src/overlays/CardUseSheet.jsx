@@ -10,7 +10,7 @@ import { S } from "../ui/styles.js";
 
 const USE_MS = CARD_USE_MS; // 카드 뒤집힘 애니메이션 재생 시간과 맞춘 지연
 
-export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip, ownedRegions=[], actions, goToMain, goToMap, goToMission }){
+export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip, ownedRegions=[], inRoom, actions, goToMain, goToMap, goToMission }){
   const [done,setDone] = useState(null);
   const [using,setUsing] = useState(null); // { label } — 재생 중인 사용 연출
   const timerRef = useRef(null);
@@ -20,9 +20,15 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
   function closeAll(){ clearTimeout(timerRef.current); setDone(null); setUsing(null); onClose(); }
 
   // 효과를 실제로 적용하는 지점 — 연출이 끝난 뒤 fn()을 호출해 상태를 바꾸고 완료 화면으로 전환
+  /* fn 이 문구를 돌려주면 그 문구를 완료 팝업에 띄운다.
+     방 카드처럼 실제로 무슨 일이 일어났는지가 카드마다 다른 경우에 쓴다. */
   function playUse(fn, msg){
     setUsing({ label: msg });
-    timerRef.current = setTimeout(()=>{ fn && fn(); setUsing(null); setDone(msg); }, USE_MS);
+    timerRef.current = setTimeout(()=>{
+      const res = fn && fn();
+      setUsing(null);
+      setDone(typeof res === "string" && res ? res : msg);
+    }, USE_MS);
   }
   // 미리보기/지역 선택권처럼 시트를 닫고 다른 화면(뽑기 오버레이)으로 넘어가야 하는 경우
   function playUseAndClose(fn){
@@ -33,9 +39,12 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
   let body;
 
   if(kind==="room"){
-    body = (<>
+    body = inRoom ? (<>
       <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:14}}>{card.desc}</p>
-      <button style={S.roomPrimary} onClick={()=>playUse(()=>actions.room(card.id), "카드를 사용했어요")}>지금 사용하기</button>
+      <button style={S.roomPrimary} onClick={()=>playUse(()=>actions.room(card.id), `${card.name} 사용 중…`)}>지금 사용하기</button>
+    </>) : (<>
+      <p style={S.sheetWarn}>방 카드는 방에 참여 중일 때만 쓸 수 있어요. 지도 탭에서 방을 만들거나 코드로 참여해 주세요.</p>
+      <button style={S.roomPrimary} onClick={()=>{ closeAll(); goToMap && goToMap(); }}>지도 탭으로 가기</button>
     </>);
   } else {
     switch(card.id){
@@ -122,6 +131,12 @@ export function CardUseSheet({ card, kind, onClose, phase, candidate, activeTrip
         </>);
         break;
       }
+      case "bonus":
+        body = (<>
+          <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6,marginBottom:10}}>{card.desc}</p>
+          <p style={S.sheetWarn}>따로 쓰지 않아도 돼요. 가지고 있으면 다음 점령 때 저절로 쓰입니다.</p>
+        </>);
+        break;
       default:
         body = <p style={{fontSize:13,color:"var(--ink-soft)",lineHeight:1.6}}>{card.desc}</p>;
     }

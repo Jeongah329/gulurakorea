@@ -40,12 +40,12 @@ export const PERSONAL_CARD_WHEN_LABEL = {
  * 방 카드 — 방(멀티플레이) 전체에 영향을 주는 카드. 마이 탭에서 즉시 사용합니다.
  */
 export const ROOM_CARDS = [
-  { id:"extra_roll", name:"모두 한 번 더",   icon:"🎁", desc:"모든 플레이어 추가 기회" },
-  { id:"chaos",       name:"대혼란",         icon:"🎲", desc:"아직 인증을 시작하지 않은 목적지를 다시 뽑음" },
-  { id:"national",    name:"전국 랜덤",       icon:"🗺️", desc:"다음 여행은 거리 제한 없이 전국에서" },
-  { id:"reveal",       name:"공개 여행지",     icon:"📢", desc:"방 사람들이 노리는 지역을 지도에 공개" },
-  { id:"throne",       name:"왕좌의 지역",     icon:"👑", desc:"지정된 지역 최초 점령 시 코인 +150" },
-  { id:"rush",         name:"여행 러시",       icon:"🔥", desc:"다음 점령 코인 1.5배" },
+  { id:"extra_roll", name:"모두 한 번 더",   icon:"🎁", desc:"방 전체에 주사위 기회 +1회" },
+  { id:"chaos",       name:"대혼란",         icon:"🎲", desc:"방 전체 · 아직 출발 전인 목적지를 다시 뽑음" },
+  { id:"national",    name:"전국 랜덤",       icon:"🗺️", desc:"방 전체 · 다음 여행은 거리 제한 없이 전국에서" },
+  { id:"reveal",       name:"공개 여행지",     icon:"📢", desc:"방 사람들이 향하는 목적지를 지도에 공개" },
+  { id:"throne",       name:"왕좌의 지역",     icon:"👑", desc:"방 전체 · 지정된 지역 최초 점령 시 코인 +150" },
+  { id:"rush",         name:"여행 러시",       icon:"🔥", desc:"방 전체 · 다음 점령 코인 1.5배" },
   { id:"protect",      name:"점령 보호",       icon:"🛡️", desc:"내 영토를 영구히 보호 · 지도에서 내 땅 선택" },
 ];
 

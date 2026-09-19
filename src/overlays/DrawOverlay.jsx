@@ -28,35 +28,34 @@ function Overview({ text }){
 export function DrawOverlay({ phase, dieN, candidate, droppedCard, relaxedMsg, themes, distIdx,
   duration, rollsLeft, rollDice, depart, destOwner, tollDue,
   memberById, resetToMain, startTrip, appliedBoosts=[],
-  hasReroll, useRerollCard, hasPreview, hasSelect, usePreviewCard, useSelectCard,
+  inventory=[], openCard,
   choices, chooseMode, chooseCandidate, cancelChoosing, sealFromPreview, previewShortlist=[] }){
-  const [fx,setFx] = useState(null); // {icon,label,fn} — 🔄/🎫 카드 사용 연출 재생 중
   const timerRef = useRef(null);
   useEffect(()=>()=>clearTimeout(timerRef.current),[]);
   // 연출이 끝난 뒤 실제로 카드 효과를 적용함
-  function playCard(icon,label,fn){
-    setFx({ icon, label });
-    timerRef.current = setTimeout(()=>{ fn(); setFx(null); }, CARD_USE_MS);
-  }
+  /* 카드는 어디서 쓰든 확인 팝업을 거친다.
+     여기서 바로 효과를 적용하면 무엇이 일어났는지 알기 어려워, 마이 탭과 같은 시트를 연다. */
+  const cardOf = (id)=> inventory.find(c=>c.id===id);
+  const cardBtn = (id, label)=> {
+    const c = cardOf(id);
+    if(!c || !openCard) return null;
+    return <button key={id} onClick={()=>openCard(c,"personal")} style={S.cardPill}>{c.icon} {label}</button>;
+  };
   /* 봉투를 연 뒤 — 배정된 지역을 다시 뽑는 카드만 쓸 수 있다 */
-  const cardButtons = hasReroll && (
-    <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
-      <button disabled={!!fx} onClick={()=>playCard("🔄","지역을 다시 배정하는 중…",useRerollCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🔄 지역 변경권 사용</button>
-    </div>
+  const rerollBtn = cardBtn("reroll","지역 변경권 사용");
+  const cardButtons = rerollBtn && (
+    <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>{rerollBtn}</div>
   );
   /* 봉투를 열기 전 — 후보를 고르는 카드는 이 단계에서만 쓸 수 있다 */
-  const preOpenCards = (hasPreview || hasSelect) && (
-    <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
-      {hasPreview && <button disabled={!!fx} onClick={()=>playCard("🔍","후보 3곳을 찾는 중…",usePreviewCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🔍 미리 보기 사용</button>}
-      {hasSelect && <button disabled={!!fx} onClick={()=>playCard("🗺️","고를 수 있는 지역을 찾는 중…",useSelectCard)} style={{...S.cardPill,opacity:fx?.6:1}}>🗺️ 지역 선택권 사용</button>}
-    </div>
+  const pre = [cardBtn("preview","미리 보기 사용"), cardBtn("select","지역 선택권 사용"), cardBtn("adjacent","인접 지역 사용")].filter(Boolean);
+  const preOpenCards = pre.length>0 && (
+    <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>{pre}</div>
   );
   const appliedRow = appliedBoosts.length>0 && (
     <div style={S.appliedRow}>{appliedBoosts.map((b,i)=><span key={i} style={S.appliedTag}>{b.icon} {b.label}</span>)}</div>
   );
   return (
                   <div style={S.overlay} className="overlay-in app-overlay">
-            {fx && <CardUseOverlay icon={fx.icon} label={fx.label}/>}
             {phase==="rolling" && (<div style={{textAlign:"center"}}><div className="die-shake"><DieFace n={dieN} size={92}/></div><p style={S.olHint}>목적지를 봉투에 담는 중…</p></div>)}
             {phase==="choosing" && (
               <div style={{textAlign:"center",width:"100%"}} className="pop-in">

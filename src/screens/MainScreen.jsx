@@ -8,7 +8,7 @@ import { S } from "../ui/styles.js";
 
 /* ───────── 메인 ───────── */
 export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDuration,budget,setBudget,rollsLeft,rollDice,activeTrip,openVerify,finishTrip,origin,apiStatus,
-  boostAdjacent,bonusActive,rushCharges,hasExtraRoll,useExtraRollCard}){
+  boostAdjacent,bonusActive,rushCharges,nationalActive,hasExtraRoll,useExtraRollCard}){
   const pending = [
     boostAdjacent && {icon:"🧭",label:"인접 지역 예약됨"},
     bonusActive && {icon:"⭐",label:"점령 보너스 예약됨"},
@@ -25,7 +25,7 @@ export function MainScreen({themes,toggleTheme,distIdx,setDistIdx,duration,setDu
       <ActiveTripCard trip={activeTrip} openVerify={openVerify} finishTrip={finishTrip}/>
     ) : (<>
       <Section title="테마" sub="끌리는 분위기를 골라요 (복수 선택)"><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{THEME_LIST.map(t=><button key={t} onClick={()=>toggleTheme(t)} style={{...S.chip,...(themes.includes(t)?S.chipOn:{})}}>{THEME_LABELS[t]}</button>)}</div></Section>
-      <Section title="이동거리" sub={`${DIST_STEPS[distIdx].label} · ${DIST_STEPS[distIdx].sub}`}><input type="range" min={0} max={3} value={distIdx} onChange={e=>setDistIdx(+e.target.value)} className="range" style={{width:"100%"}}/><div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>{DIST_STEPS.map((d,i)=><span key={i} style={{fontSize:11,fontWeight:i===distIdx?800:500,color:i===distIdx?"var(--stamp)":"var(--ink-soft)"}}>{d.label}</span>)}</div></Section>
+      <Section title="이동거리" sub={nationalActive ? "🗺️ 전국 랜덤 적용중 · 다음 주사위는 전국에서" : `${DIST_STEPS[distIdx].label} · ${DIST_STEPS[distIdx].sub}`}><input type="range" min={0} max={3} value={nationalActive?3:distIdx} disabled={nationalActive} onChange={e=>setDistIdx(+e.target.value)} className="range" style={{width:"100%",opacity:nationalActive?.6:1}}/><div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>{DIST_STEPS.map((d,i)=>{ const on = nationalActive ? i===3 : i===distIdx; return <span key={i} style={{fontSize:11,fontWeight:on?800:500,color:on?"var(--stamp)":"var(--ink-soft)"}}>{d.label}</span>; })}</div></Section>
       <Section title="여행 기간"><div style={{display:"flex",gap:8}}>{DURATIONS.map(d=><button key={d} onClick={()=>setDuration(d)} style={{...S.segBtn,...(duration===d?S.segOn:{})}}>{d}</button>)}</div></Section>
       <Section title="예산" sub="교통·숙박 포함 예상 경비"><div style={{display:"flex",gap:8}}>{BUDGETS.map(b=><button key={b.v} onClick={()=>setBudget(b.v)} style={{...S.segBtn,...(budget===b.v?S.segOn:{})}}>{b.label}</button>)}</div></Section>
       {rollsLeft<=0 && hasExtraRoll && (

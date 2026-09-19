@@ -1,7 +1,7 @@
 /**
  * 도착 인증 / 영수증 인증
  */
-import Tesseract from "tesseract.js";
+import Tesseract, { createWorker } from "tesseract.js";
 import { kakaoLocal, kakaoRegionAny } from "./kakao.js";
 import { getPosition, haversineKm } from "../lib/geo.js";
 import { shortSgg } from "../lib/sigungu.js";
@@ -36,13 +36,75 @@ async function hashFile(file) {
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+/* ── OCR 속도 개선 ────────────────────────────────────────────
+   1) 인식기를 한 번만 만들어 재사용한다.
+      Tesseract.recognize() 를 부를 때마다 한국어 학습 데이터를 다시 내려받느라
+      인증할 때마다 수십 초가 걸렸다. 작업자를 붙잡아 두면 두 번째부터 즉시 읽는다.
+   2) 사진을 긴 변 1280px 로 줄여서 읽는다.
+      요즘 휴대폰 사진은 4000px 이 넘는데, 영수증 글자는 1280px 이면 충분히 읽힌다.
+      픽셀 수가 10분의 1로 줄어 인식 시간도 그만큼 짧아진다.
+   ──────────────────────────────────────────────────────────── */
+
+let workerPromise = null;
+function getWorker() {
+  if (!workerPromise) {
+    workerPromise = createWorker("kor+eng").catch((e) => {
+      workerPromise = null;      // 실패하면 다음에 다시 시도할 수 있게 비운다
+      throw e;
+    });
+  }
+  return workerPromise;
+}
+
+/* 인증 화면에 들어올 때 미리 불러 두면 실제 인증 순간에 기다리지 않는다. */
+export function warmUpOcr() {
+  try { getWorker().catch(() => {}); } catch (e) {}
+}
+
+/* 사진을 긴 변 기준으로 줄인다. 실패하면 원본을 그대로 돌려준다. */
+async function shrink(file, maxSide = 1280) {
+  try {
+    const url = URL.createObjectURL(file);
+    const img = await new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = url;
+    });
+    const long = Math.max(img.width, img.height);
+    if (long <= maxSide) { URL.revokeObjectURL(url); return file; }
+    const r = maxSide / long;
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * r);
+    c.height = Math.round(img.height * r);
+    const ctx = c.getContext("2d");
+    if (!ctx) { URL.revokeObjectURL(url); return file; }
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.85));
+    return blob || file;
+  } catch (e) {
+    return file;
+  }
+}
+
 /* 영수증 사진(file)을 OCR로 읽어 상호명 · 지역 · 날짜 · 금액을 추출하고
    4가지 조건(지역 일치 / 최근 영수증 / 사업자 진위 / 중복 아님)으로 방문을 검증한다.
    Tesseract.js는 완전 무료 · 브라우저 로컬 실행이라 별도 API 키나 서버가 필요 없다. */
 export async function verifyReceipt(dest, file) {
   if (!file) throw new Error("영수증 사진을 선택해 주세요");
 
-  const { data: { text } } = await Tesseract.recognize(file, "kor+eng");
+  /* 해시는 원본으로 구해야 같은 사진을 다시 쓰는지 정확히 걸러진다 */
+  const hashPromise = hashFile(file);
+
+  let text = "";
+  try {
+    const [worker, small] = await Promise.all([getWorker(), shrink(file)]);
+    ({ data: { text } } = await worker.recognize(small));
+  } catch (e) {
+    /* 작업자를 못 만들면 예전 방식으로 한 번 더 시도한다 */
+    ({ data: { text } } = await Tesseract.recognize(await shrink(file), "kor+eng"));
+  }
   const cleaned = text.replace(/[ \t]+/g, " ").trim();
   const lines = cleaned.split("\n").map(l => l.trim()).filter(Boolean);
 
@@ -64,7 +126,7 @@ export async function verifyReceipt(dest, file) {
   const bizNumFound = /\d{3}-\d{2}-\d{5}/.test(cleaned);
 
   // 4) 중복 아님: 같은 이미지를 이미 인증에 쓴 적 있는지 해시로 확인
-  const hash = await hashFile(file);
+  const hash = await hashPromise;
   const unique = !usedReceiptHashes.has(hash);
   if (unique) usedReceiptHashes.add(hash);
 

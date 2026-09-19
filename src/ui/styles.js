@@ -50,7 +50,7 @@ export const S = {
   missionHead:{fontFamily:"'HiKR',sans-serif",fontSize:14,color:"var(--ink)",margin:"4px 0 10px"},
   mission:{display:"flex",alignItems:"center",gap:10,background:"var(--paper-2)",borderRadius:12,padding:"11px 13px"},
   missionTag:{flexShrink:0,whiteSpace:"nowrap",fontSize:10.5,fontWeight:800,color:"var(--sea)",background:"rgba(30,142,138,.12)",padding:"3px 7px",borderRadius:6},
-  modalScrim:{position:"absolute",inset:0,background:"rgba(13,23,48,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"18px 14px",zIndex:120},
+  modalScrim:{position:"absolute",inset:0,background:"rgba(13,23,48,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"18px 14px",zIndex:140},
   /* 로그인 안내는 설정·상점 위에 떠야 한다 */
   loginScrim:{position:"absolute",inset:0,background:"rgba(13,23,48,.62)",display:"flex",alignItems:"center",justifyContent:"center",padding:"18px 14px",zIndex:150},
   sheet:{background:"var(--paper)",width:"100%",maxWidth:430,maxHeight:"80%",overflowY:"auto",borderRadius:14,padding:"16px 18px 20px",boxShadow:"0 14px 44px rgba(0,0,0,.4)"},

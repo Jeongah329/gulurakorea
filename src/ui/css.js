@@ -45,6 +45,29 @@ body.modal-open .app-shell,body.modal-open .app-body{overflow:hidden!important}.
 .blink-dot{animation:blinkdot 1s ease-in-out infinite}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
 /* ── PC 웹 레이아웃 (1024px 이상) ── 모바일은 기존 세로형 유지 */
+/* ── 모바일 (1024px 미만) ──
+   하단 탭을 화면 기준으로 고정한다. 앱 틀 기준으로만 붙여 두면
+   주소창이 접히고 펴질 때 탭이 화면 밖으로 밀려난다. */
+@media(max-width:1023.98px){
+  .app-nav{
+    position:fixed!important;
+    left:50%!important; transform:translateX(-50%);
+    bottom:0!important; right:auto!important;
+    width:100%; max-width:440px;
+    z-index:94;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;
+    box-shadow:0 -2px 12px rgba(13,23,48,.08);
+  }
+  /* 상단 바도 스크롤을 따라오게 해 코인·상점·설정에 바로 닿게 한다 */
+  .app-bar{
+    position:sticky; top:0; z-index:95;
+    background:var(--paper);
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+  }
+  /* 고정된 탭에 본문 마지막 줄이 가리지 않도록 여백을 준다 */
+  .app-body{ padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))!important; }
+}
+
 @media(min-width:1024px){
   /* 앱 액자 제거 — 일반 웹사이트처럼 화면 전체를 씀 */
   .app-root{

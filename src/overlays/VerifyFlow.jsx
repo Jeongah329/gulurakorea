@@ -3,13 +3,19 @@
  */
 import React, { useEffect, useState, useRef } from "react";
 import { kakaoRouteUrl } from "../api/kakao.js";
-import { verifyArrivalReal, verifyGps, verifyReceipt } from "../api/verification.js";
+import { verifyArrivalReal, verifyGps, verifyReceipt, warmUpOcr } from "../api/verification.js";
 import { TOLL } from "../data/constants.js";
 import { KakaoMap } from "../ui/KakaoMap.jsx";
 import { CARD_USE_MS, CardUseOverlay, Chk } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 export function VerifyFlow({ trip, onMissionDone, onMissionPlace, onDone, memberById, flash, hasExemptCard, useMissionExemptCard, devMode }){
+  /* 영수증 인식기를 미리 불러 둔다. 실제 인증 순간에 기다리지 않게 하기 위해서다.
+     영수증 미션이 있는 여행에서만 받는다. 인식 데이터가 커서 쓰지도 않을 여행에
+     미리 내려받으면 사용자 데이터만 축낸다. */
+  useEffect(()=>{
+    if(trip && trip.missions.some(m=>m.method==="receipt" || m.t==="맛집")) warmUpOcr();
+  },[trip]);
   const arrivalIdx = trip.missions.findIndex(m=>m.t==="명소");
   const [step,setStep] = useState(trip.missions[arrivalIdx]?.done?1:0);
   const [scanning,setScanning] = useState(false);

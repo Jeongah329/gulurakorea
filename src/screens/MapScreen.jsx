@@ -9,7 +9,7 @@ import { CARD_USE_MS, CardUseOverlay, Lg } from "../ui/primitives.jsx";
 import { S } from "../ui/styles.js";
 
 /* ───────── 지도 (실제 경계 / 타일 보드) ───────── */
-export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard,rushCharges=0,reveals=[],roomCards=[],useRoomCard}){
+export function MapScreen({ownership,ownerColor,memberById,members,room,createRoom,joinRoom,openShare,leaveRoom,score,memberScore,ownedCount,myRegionCount,activeTrip,flash,myName,onNameChange,pendingJoinCode,clearPendingJoin,online,homeSet,homeCand,claimHome,protectedRegions=[],throneRegion,hasProtectCard,useProtectionCard,rushCharges=0,reveals=[],roomCards=[],useRoomCard,openCard}){
   const [view,setView] = useState("real");
   const [roomCardOpen,setRoomCardOpen] = useState(false);   // 방 카드 목록 접기/펴기
   const [joining,setJoining] = useState(()=>!!pendingJoinCode);
@@ -53,7 +53,7 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
         {roomCardOpen && (
           <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:9}}>
             {roomCards.map((c,i)=>(
-              <button key={i} onClick={()=>useRoomCard(c.id)} style={S.roomCardRow}>
+              <button key={i} onClick={()=>openCard(c,"room")} style={S.roomCardRow}>
                 <span style={{fontSize:18,width:26,textAlign:"center"}}>{c.icon}</span>
                 <span style={{flex:1,textAlign:"left",minWidth:0}}>
                   <b style={{fontSize:12.5,fontWeight:800,color:"var(--ink)",display:"block"}}>{c.name}</b>
@@ -69,7 +69,7 @@ export function MapScreen({ownership,ownerColor,memberById,members,room,createRo
       <div style={S.holoBox}>
         {rushCharges>0 && <p style={S.holoLine}>🔥 여행 러시 적용중 · 다음 점령 코인 1.5배</p>}
         {reveals.map((r,i)=>(
-          <p key={i} style={S.holoLine}>📢 {r.who}님이 노리는 지역 · {r.where}</p>
+          <p key={i} style={S.holoLine}>📢 {r.who}님의 목적지 · {r.where}</p>
         ))}
       </div>
     )}
@@ -219,7 +219,7 @@ export function TileBoard({ownership,ownerColor,memberById,members,room,activeSg
         <span><i style={{...S.boardLegendDot,border:"2px solid #FFD23F"}}/>내가 점령</span>
         <span><i style={{...S.boardLegendDot,border:"2px solid rgba(255,255,255,.25)"}}/>비어 있음</span>
         <span>☀️ ×2 인구감소지역 · 점수 2배</span>
-        <span>🛡️ 보호 · 도전 1회 방어</span>
+        <span>🛡️ 보호 · 빼앗기지 않음</span>
         <span><i style={{...S.boardLegendDot,border:"2px solid #F5C84B"}}/>👑 왕좌 · 최초 점령 코인 +150</span>
       </div>
       {groups.map(g=>{

@@ -1,7 +1,5 @@
-/**
- * 공통 UI 조각 — 섹션 / 지표 / 주사위 / 봉투 / 스플래시
- */
 import React from "react";
+import { createPortal } from "react-dom";
 import { S } from "./styles.js";
 
 export const CARD_USE_MS = 800; // 카드 뒤집힘 연출 재생 시간 — 이 시간이 지난 뒤 실제 효과가 적용됨
@@ -34,12 +32,24 @@ export function CardFlipFX({ icon, label, labelColor="var(--ink-soft)" }) {
 }
 
 /** 마이 탭 시트 바깥(여행 인증·지도·주사위 화면)에서 카드를 바로 쓸 때 덮는 전체 오버레이 */
+/**
+ * 카드 사용 연출.
+ *
+ * PC 화면에서는 봉투 오버레이 안쪽 요소에 zoom 이 걸려 있는데,
+ * zoom 이 적용된 요소는 그 안의 position:fixed 요소를 자기 기준으로 가둔다.
+ * 그래서 화면 한가운데가 아니라 엉뚱한 곳에 떴다.
+ * 이 연출만 document.body 로 빼내 화면에 직접 그린다.
+ */
 export function CardUseOverlay({ icon, label }) {
-  return (
-    <div className="modal-scrim overlay-in" style={{ position: "fixed", inset: 0, background: "rgba(13,23,48,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 190 }}>
+  const node = (
+    <div className="modal-scrim overlay-in"
+      style={{ position: "fixed", inset: 0, background: "rgba(13,23,48,.6)",
+               display: "flex", alignItems: "center", justifyContent: "center", zIndex: 190 }}>
       <CardFlipFX icon={icon} label={label} labelColor="#fff" />
     </div>
   );
+  if (typeof document === "undefined" || !document.body) return node;
+  return createPortal(node, document.body);
 }
 
 export function Section({title,sub,children}){return (<section style={S.section}><div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:10}}><h3 style={S.secTitle}>{title}</h3>{sub && <span style={{fontSize:11.5,color:"var(--ink-soft)"}}>{sub}</span>}</div>{children}</section>);}
